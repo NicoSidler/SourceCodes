@@ -112,6 +112,17 @@ ggplot(data, aes(x = trait, y = value)) +
        x = "Trait", y = "Rating Value")
 
 
+# Summary of continuous variables by fluency (Likert rating: value)
+descriptive_stats <- data %>%
+  group_by(fluent) %>%
+  summarise(
+    Mean = mean(value, na.rm = TRUE),
+    Median = median(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Min = min(value, na.rm = TRUE),
+    Max = max(value, na.rm = TRUE)
+  )
+print(descriptive_stats)
 
 # Visualizing the distribution of Likert-scale ratings by fluency
 ggplot(data, aes(x = value)) +
