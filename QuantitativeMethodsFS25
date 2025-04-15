@@ -111,6 +111,7 @@ ggplot(data, aes(x = trait, y = value)) +
   labs(title = "Boxplot of Likert-scale Ratings by Trait",
        x = "Trait", y = "Rating Value")
 
+#-----------------------------------------------------------------------------------------------------
 
 # Summary of continuous variables by fluency (Likert rating: value)
 descriptive_stats <- data %>%
@@ -147,6 +148,93 @@ ggplot(data, aes(x = fluent, y = value)) +
   labs(title = "Boxplot of Likert-scale Ratings by Fluency",
        x = "Fluency", y = "Rating Value")
 
+#-----------------------------------------------------------------
+
+# Boxplot for fluency for each trait (likert value)
+ggplot(data, aes(x = reorder(trait, value, FUN = mean), y = value)) +
+  geom_boxplot(outlier.shape = NA) +     # Remove outliers from display
+  facet_wrap(~ fluent) +                 # Create separate panels per fluency level
+  scale_x_discrete(labels = c(
+    "articulate"        = "a",
+    "confident"         = "c",
+    "do.well.interviews"= "dwi",
+    "knowledgeable"     = "k",
+    "likely.to.succeed" = "lts",
+    "organised"         = "o",
+    "pleasant"          = "p",
+    "professional"      = "pro"
+  )) +
+  labs(title = "Boxplot of Likert-scale Ratings by Trait (Sorted by Mean) for Fluency",
+       x = "Trait (sorted by mean value)",
+       y = "Rating Value") +
+  theme_minimal(base_size = 8)
+
+# BarChart for fluency for each trait (likert value)
+# Summarize median value for each combination of fluency and trait
+summ_df <- data %>% 
+  group_by(fluent, trait) %>% 
+  summarise(median_value = median(value, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  # Within each fluency group, reorder traits by their median value.
+  group_by(fluent) %>%
+  mutate(trait_order = factor(trait, levels = trait[order(median_value)])) %>%
+  ungroup()
+
+# Create the bar chart using the computed medians and reordered trait factor.
+ggplot(summ_df, aes(x = trait_order, y = median_value, fill = trait_order)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  facet_wrap(~ fluent, scales = "free_x") +
+  # Map the full trait names to abbreviations
+  scale_x_discrete(labels = c(
+    "articulate" = "a",
+    "confident" = "c",
+    "do.well.interviews" = "dwi",
+    "knowledgeable" = "k",
+    "likely.to.succeed" = "lts",
+    "organised" = "o",
+    "pleasant" = "p",
+    "professional" = "pro"
+  )) +
+  labs(title = "Barchart of Median Likert-scale Ratings by Trait for Fluency",
+       x = "Trait (sorted by median rating)",
+       y = "Median Rating") +
+  theme_minimal(base_size = 8) +
+  # Rotate x-axis text for improved readability
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Summarize mean value for each combination of fluency and trait
+summ_df <- data %>% 
+  group_by(fluent, trait) %>% 
+  summarise(mean_value = mean(value, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  # Within each fluency group, reorder traits by their mean value.
+  group_by(fluent) %>%
+  mutate(trait_order = factor(trait, levels = trait[order(mean_value)])) %>%
+  ungroup()
+
+# Create the bar chart using the computed means and reordered trait factor.
+ggplot(summ_df, aes(x = trait_order, y = mean_value, fill = trait_order)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  facet_wrap(~ fluent, scales = "free_x") +
+  # Map the full trait names to abbreviations
+  scale_x_discrete(labels = c(
+    "articulate"       = "a",
+    "confident"        = "c",
+    "do.well.interviews" = "dwi",
+    "knowledgeable"    = "k",
+    "likely.to.succeed"= "lts",
+    "organised"        = "o",
+    "pleasant"         = "p",
+    "professional"     = "pro"
+  )) +
+  labs(title = "Barchart of Mean Likert-scale Ratings by Trait for Fluency",
+       x = "Trait (sorted by mean rating)",
+       y = "Mean Rating") +
+  theme_minimal(base_size = 8) +
+  # Rotate x-axis text for improved readability
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+#-----------------------------------------------------------------------------------------------------------------
 # Summary of continuous variables by accent (Likert rating: value)
 descriptive_stats <- data %>%
   group_by(accent) %>%
@@ -158,6 +246,8 @@ descriptive_stats <- data %>%
     Max = max(value, na.rm = TRUE)
   )
 print(descriptive_stats)
+
+
 
 # Visualizing the distribution of Likert-scale ratings by Accent
 ggplot(data, aes(x = value)) +
