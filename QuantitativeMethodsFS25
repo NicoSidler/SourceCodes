@@ -147,7 +147,17 @@ ggplot(data, aes(x = fluent, y = value)) +
   labs(title = "Boxplot of Likert-scale Ratings by Fluency",
        x = "Fluency", y = "Rating Value")
 
-
+# Summary of continuous variables by accent (Likert rating: value)
+descriptive_stats <- data %>%
+  group_by(accent) %>%
+  summarise(
+    Mean = mean(value, na.rm = TRUE),
+    Median = median(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Min = min(value, na.rm = TRUE),
+    Max = max(value, na.rm = TRUE)
+  )
+print(descriptive_stats)
 
 # Visualizing the distribution of Likert-scale ratings by Accent
 ggplot(data, aes(x = value)) +
@@ -173,7 +183,17 @@ ggplot(data, aes(x = accent, y = value)) +
   labs(title = "Boxplot of Likert-scale Ratings by Accent",
        x = "Accent", y = "Rating Value")
 
-
+# Summary of continuous variables by question (Likert rating: value)
+descriptive_stats <- data %>%
+  group_by(question) %>%
+  summarise(
+    Mean = mean(value, na.rm = TRUE),
+    Median = median(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Min = min(value, na.rm = TRUE),
+    Max = max(value, na.rm = TRUE)
+  )
+print(descriptive_stats)
 
 # Visualizing the distribution of Likert-scale ratings by question
 ggplot(data, aes(x = value)) +
@@ -200,6 +220,17 @@ ggplot(data, aes(x = question, y = value)) +
        x = "Question", y = "Rating Value")
 
 
+# Summary of continuous variables by gender (Likert rating: value)
+descriptive_stats <- data %>%
+  group_by(gender) %>%
+  summarise(
+    Mean = mean(value, na.rm = TRUE),
+    Median = median(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Min = min(value, na.rm = TRUE),
+    Max = max(value, na.rm = TRUE)
+  )
+print(descriptive_stats)
 
 
 # Visualizing the distribution of Likert-scale ratings by gender (confouding?)
@@ -208,6 +239,18 @@ ggplot(data, aes(x = value)) +
   facet_wrap(~ gender) +
   labs(title = "Distribution of Likert-scale Ratings by Gender",
        x = "Rating Value", y = "Frequency")
+
+# Summary of continuous variables by education (Likert rating: value)
+descriptive_stats <- data %>%
+  group_by(education) %>%
+  summarise(
+    Mean = mean(value, na.rm = TRUE),
+    Median = median(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Min = min(value, na.rm = TRUE),
+    Max = max(value, na.rm = TRUE)
+  )
+print(descriptive_stats)
 
 # Visualizing the distribution of Likert-scale ratings by education (confouding?)
 ggplot(data, aes(x = value)) +
@@ -234,3 +277,137 @@ ggplot(data, aes(x = accent, y = value, fill = question)) +
   labs(title = "Ratings by Accent and Question Type, Separated by Fluent Condition",
        x = "Accent", y = "Rating Value") +
   theme_minimal()
+
+# Boxplot to compare ratings by accent and question type, faceted by fluent condition
+ggplot(data, aes(x = trait, y = value, fill = question)) +
+  geom_boxplot() +
+  facet_wrap(~ fluent) +
+  scale_x_discrete(labels = c(
+    "articulate" = "a",
+    "confident" = "c",
+    "do.well.interviews" = "dwi",
+    "knowledgeable" = "k",
+    "likely.to.succeed" = "lts",
+    "organised" = "o",
+    "pleasant" = "p",
+    "professional" = "pro"
+  )) +
+  labs(title = "Ratings by Trait and Question Type, Separated by Fluent Condition",
+       x = "Trait", y = "Rating Value") +
+  theme_minimal()
+
+#Boxplots across all dependet variables
+ggplot(data, aes(x = trait, y = value, fill = question)) +
+  geom_boxplot(outlier.colour = "red", outlier.shape = 16, outlier.size = 0.2) +
+  facet_grid(accent ~ fluent) +
+  scale_x_discrete(labels = c(
+    "articulate" = "a",
+    "confident" = "c",
+    "do.well.interviews" = "dwi",
+    "knowledgeable" = "k",
+    "likely.to.succeed" = "lts",
+    "organised" = "o",
+    "pleasant" = "p",
+    "professional" = "pro"
+  )) +
+  labs(title = "Relationship of Trait, Accent, Fluency & Question to Value",
+       x = "Trait",
+       y = "Rating Value") +
+  theme_minimal(base_size = 8)
+
+
+
+#Boxplots across all dependet variables and not outliers
+
+ggplot(data, aes(x = trait, y = value, fill = question)) +
+  geom_boxplot(outlier.shape = NA) +
+  facet_grid(accent ~ fluent) +
+  scale_x_discrete(labels = c(
+    "articulate" = "a",
+    "confident" = "c",
+    "do.well.interviews" = "dwi",
+    "knowledgeable" = "k",
+    "likely.to.succeed" = "lts",
+    "organised" = "o",
+    "pleasant" = "p",
+    "professional" = "pro"
+  )) +
+  labs(title = "Relationship of Trait, Accent, Fluency & Question to Value",
+       x = "Trait",
+       y = "Rating Value") +
+  theme_minimal(base_size = 8)
+
+
+# ----------------------------------
+# 4. Inferential Statistical Analysis
+# ----------------------------------
+
+# Given that each respondent provides multiple ratings, a mixed-effects model is appropriate.
+# Here, the dependent variable is "value" and predictors include accent, fluent, and question.
+# We include a random intercept for participant_ID to account for repeated measures.
+mixed_model <- lmer(value ~ accent * fluent * question + (1 | participant_ID), 
+                    data = data, REML = FALSE)
+summary(mixed_model)
+
+# Check model assumptions: residual plots and Q-Q plot
+par(mfrow = c(1, 2))
+plot(resid(mixed_model), main = "Residuals Plot", ylab = "Residuals", xlab = "Index")
+qqnorm(resid(mixed_model), main = "Normal Q-Q Plot of Residuals")
+qqline(resid(mixed_model))
+par(mfrow = c(1, 1))
+
+# Alternatively, if you prefer a simple regression model ignoring repeated measures:
+lm_model <- lm(value ~ accent * fluent * question, data = data)
+summary(lm_model)
+# Diagnostic plots for the linear model
+par(mfrow = c(2, 2))
+plot(lm_model)
+par(mfrow = c(1, 1))
+
+# A more comprehensive regression model including attitudinal measures:
+full_model <- lm(value ~ accent * fluent * question + 
+                   professional_demeanour + presence_prejudice + imp_stand_lg,
+                 data = data)
+summary(full_model)
+# Model diagnostics for the full model
+par(mfrow = c(2, 2))
+plot(full_model)
+par(mfrow = c(1, 1))
+
+
+# ----------------------------
+# 5. Additional and Subgroup Analyses
+# ----------------------------
+
+# Exploratory: Relationship between attitudinal measures and ratings
+# Create a correlation matrix for continuous attitudinal measures and rating (value)
+attitudinal_vars <- data %>% 
+  select(value, professional_demeanour, presence_prejudice, imp_stand_lg, age)
+cor_matrix <- cor(attitudinal_vars, use = "complete.obs")
+print(cor_matrix)
+
+# Visualizing correlations using a pairs plot
+pairs(attitudinal_vars, main = "Scatterplot Matrix of Attitudinal Measures and Ratings")
+
+# Subgroup Analysis: For example, examining rating differences across genders
+ggplot(data, aes(x = gender, y = value, fill = gender)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Ratings by Gender",
+       x = "Gender", y = "Rating Value") +
+  theme_minimal()
+
+
+# ---------------------------
+# 6. Reporting and Interpretation
+# ---------------------------
+# At this stage, review the outputs from:
+#   - Descriptive statistics and plots to check for distribution patterns and outliers.
+#   - Mixed-effects and linear regression models to assess main effects and interactions.
+#   - Diagnostic plots to ensure model assumptions are met.
+#
+# Based on the significant results and observed patterns, you can then draw conclusions
+# regarding how variables (e.g., accent, fluent condition, legal expertise of the question) influence
+# the perceived ratings. Additional subgroup or sensitivity analyses can help further explore
+# nuanced differences in the data.
+#
+# Finally, document the analysis steps, report key findings, and discuss implications in your seminar paper.
