@@ -1,0 +1,289 @@
+# ---------------------------
+# 1. Setup and Data Loading
+# ---------------------------
+
+# Load necessary packages. Install any if not already installed.
+if(!require(tidyverse)) install.packages("tidyverse", dependencies = TRUE)
+if(!require(lme4)) install.packages("lme4", dependencies = TRUE)
+if(!require(car)) install.packages("car", dependencies = TRUE)
+
+library(tidyverse)
+library(lme4)
+library(car)
+
+# Set the directory path where your data is located.
+dir_path <- "C:/Users/Nico Sidler/OneDrive - Universitaet Bern/Desktop/SeminarPaper"
+
+# Load the dataset (adjust the filename if needed)
+data_path <- file.path(dir_path, "Seminar_Paper_data.csv")
+data <- read.csv(data_path, stringsAsFactors = FALSE)
+
+# View structure and summary of the data
+str(data)
+summary(data)
+
+
+# ----------------------------------------
+# 2. Data Cleaning and Preparation
+# ----------------------------------------
+# Convert variables to appropriate types based on the data description
+
+# Categorical variables: participant_ID, accent, fluent, question, trait, gender, ethnicity, region, education
+data$participant_ID <- as.factor(data$participant_ID)
+data$accent <- factor(data$accent, levels = c("EE", "GNE", "LE", "MLE", "RP"))
+data$fluent <- factor(data$fluent, levels = c("F", "D"))  # F = fluent, D = disfluencies
+data$question <- factor(data$question, levels = c("non-expert", "expert"))
+data$trait <- as.factor(data$trait)
+data$gender <- as.factor(data$gender)
+data$ethnicity <- as.factor(data$ethnicity)
+data$region <- as.factor(data$region)
+data$education <- factor(data$education, 
+                         levels = c("GCSE", "Alevel", "FurtherEd", "Undergrad", "Postgrad"))
+
+# Convert numeric variables: value (Likert scale ratings), professional_demeanour, presence_prejudice, imp_stand_lg, and age
+data$value <- as.numeric(data$value)
+data$professional_demeanour <- as.numeric(data$professional_demeanour)
+data$presence_prejudice <- as.numeric(data$presence_prejudice)
+data$imp_stand_lg <- as.numeric(data$imp_stand_lg)
+data$age <- as.numeric(data$age)
+
+# Check for missing values in each column
+colSums(is.na(data))
+
+
+# ------------------------------
+# 3. Descriptive Analysis
+# ------------------------------
+
+# Univariate Analysis: Frequency tables for categorical variables
+table(data$accent)
+prop.table(table(data$accent))  # Percentages
+
+table(data$fluent)
+table(data$question)
+table(data$trait)
+table(data$education)
+table(data$gender)
+
+# Summary of continuous variables by trait (Likert rating: value)
+descriptive_stats <- data %>%
+  group_by(trait) %>%
+  summarise(
+    Mean = mean(value, na.rm = TRUE),
+    Median = median(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Min = min(value, na.rm = TRUE),
+    Max = max(value, na.rm = TRUE)
+  )
+print(descriptive_stats)
+
+# Visualizing the distribution of Likert-scale ratings by trait
+ggplot(data, aes(x = value)) +
+  geom_histogram(binwidth = 1, fill = "lightblue", color = "black") +
+  facet_wrap(~ trait) +
+  labs(title = "Distribution of Likert-scale Ratings by Trait",
+       x = "Rating Value", y = "Frequency")
+
+# Create a boxplot for each trait
+ggplot(data, aes(x = trait, y = value)) +
+  geom_boxplot(outlier.colour = "red", outlier.shape = 16, outlier.size = 2) +
+  # Annotate median values (blue text), nudged upward
+  stat_summary(fun = median, geom = "text",
+               aes(label = round(..y.., 1)),
+               position = position_nudge(y = 0.5),
+               color = "blue", size = 3) +
+  # Annotate mean values (dark green text), nudged downward
+  stat_summary(fun = mean, geom = "text",
+               aes(label = round(..y.., 1)),
+               position = position_nudge(y = -0.5),
+               color = "darkgreen", size = 3) +
+  labs(title = "Boxplot of Likert-scale Ratings by Trait",
+       x = "Trait", y = "Rating Value")
+
+
+
+# Visualizing the distribution of Likert-scale ratings by fluency
+ggplot(data, aes(x = value)) +
+  geom_histogram(binwidth = 1, fill = "coral3", color = "black") +
+  facet_wrap(~ fluent) +
+  labs(title = "Distribution of Likert-scale Ratings by Fluency",
+       x = "Rating Value", y = "Frequency")
+
+# Create a boxplot for each fluency
+ggplot(data, aes(x = fluent, y = value)) +
+  geom_boxplot(outlier.colour = "red", outlier.shape = 16, outlier.size = 2) +
+  # Annotate median values (blue) nudged upward
+  stat_summary(fun = median, geom = "text",
+               aes(label = round(..y.., 1)),
+               position = position_nudge(y = 0.5),
+               color = "blue", size = 3) +
+  # Annotate mean values (dark green) nudged downward
+  stat_summary(fun = mean, geom = "text",
+               aes(label = round(..y.., 1)),
+               position = position_nudge(y = -0.5),
+               color = "darkgreen", size = 3) +
+  labs(title = "Boxplot of Likert-scale Ratings by Fluency",
+       x = "Fluency", y = "Rating Value")
+
+
+
+# Visualizing the distribution of Likert-scale ratings by Accent
+ggplot(data, aes(x = value)) +
+  geom_histogram(binwidth = 1, fill = "chartreuse4", color = "black") +
+  facet_wrap(~ accent) +
+  labs(title = "Distribution of Likert-scale Ratings by Accent",
+       x = "Rating Value", y = "Frequency")
+
+# Create a boxplot for each accent
+
+ggplot(data, aes(x = accent, y = value)) +
+  geom_boxplot(outlier.colour = "red", outlier.shape = 16, outlier.size = 2) +
+  # Add median values (blue text) nudged upward
+  stat_summary(fun = median, geom = "text",
+               aes(label = round(..y.., 1)),
+               position = position_nudge(y = 0.5),
+               color = "blue", size = 3) +
+  # Add mean values (dark green text) nudged downward
+  stat_summary(fun = mean, geom = "text",
+               aes(label = round(..y.., 1)),
+               position = position_nudge(y = -0.5),
+               color = "darkgreen", size = 3) +
+  labs(title = "Boxplot of Likert-scale Ratings by Accent",
+       x = "Accent", y = "Rating Value")
+
+
+
+# Visualizing the distribution of Likert-scale ratings by question
+ggplot(data, aes(x = value)) +
+  geom_histogram(binwidth = 1, fill = "bisque2", color = "black") +
+  facet_wrap(~ question) +
+  labs(title = "Distribution of Likert-scale Ratings by Question",
+       x = "Rating Value", y = "Frequency")
+
+# Create a boxplot for each question
+
+ggplot(data, aes(x = question, y = value)) +
+  geom_boxplot(outlier.colour = "red", outlier.shape = 16, outlier.size = 2) +
+  # Annotate the median (blue text), nudged slightly upward
+  stat_summary(fun = median, geom = "text",
+               aes(label = round(..y.., 1)),
+               position = position_nudge(y = 0.5),
+               color = "blue", size = 3) +
+  # Annotate the mean (dark green text), nudged slightly downward
+  stat_summary(fun = mean, geom = "text",
+               aes(label = round(..y.., 1)),
+               position = position_nudge(y = -0.5),
+               color = "darkgreen", size = 3) +
+  labs(title = "Boxplot of Likert-scale Ratings by Question",
+       x = "Question", y = "Rating Value")
+
+
+
+
+# Visualizing the distribution of Likert-scale ratings by gender (confouding?)
+ggplot(data, aes(x = value)) +
+  geom_histogram(binwidth = 1, fill = "bisque2", color = "black") +
+  facet_wrap(~ gender) +
+  labs(title = "Distribution of Likert-scale Ratings by Gender",
+       x = "Rating Value", y = "Frequency")
+
+# Visualizing the distribution of Likert-scale ratings by education (confouding?)
+ggplot(data, aes(x = value)) +
+  geom_histogram(binwidth = 1, fill = "bisque2", color = "black") +
+  facet_wrap(~ education) +
+  labs(title = "Distribution of Likert-scale Ratings by Education",
+       x = "Rating Value", y = "Frequency")
+
+# Boxplot for detecting potential outliers in ratings
+ggplot(data, aes(x = trait, y = value)) +
+  geom_boxplot(fill = "lightgreen") +
+  labs(title = "Boxplot of Ratings by Trait",
+       x = "Trait", y = "Rating Value")
+
+# Bivariate Analysis: Cross-tabulations and comparisons
+# For example, cross-tabulate accent and question type
+table_accent_question <- table(data$accent, data$question)
+print(table_accent_question)
+
+# Boxplot to compare ratings by accent and question type, faceted by fluent condition
+ggplot(data, aes(x = accent, y = value, fill = question)) +
+  geom_boxplot() +
+  facet_wrap(~ fluent) +
+  labs(title = "Ratings by Accent and Question Type, Separated by Fluent Condition",
+       x = "Accent", y = "Rating Value") +
+  theme_minimal()
+
+
+# ----------------------------------
+# 4. Inferential Statistical Analysis
+# ----------------------------------
+
+# Given that each respondent provides multiple ratings, a mixed-effects model is appropriate.
+# Here, the dependent variable is "value" and predictors include accent, fluent, and question.
+# We include a random intercept for participant_ID to account for repeated measures.
+mixed_model <- lmer(value ~ accent * fluent * question + (1 | participant_ID), 
+                    data = data, REML = FALSE)
+summary(mixed_model)
+
+# Check model assumptions: residual plots and Q-Q plot
+par(mfrow = c(1, 2))
+plot(resid(mixed_model), main = "Residuals Plot", ylab = "Residuals", xlab = "Index")
+qqnorm(resid(mixed_model), main = "Normal Q-Q Plot of Residuals")
+qqline(resid(mixed_model))
+par(mfrow = c(1, 1))
+
+# Alternatively, if you prefer a simple regression model ignoring repeated measures:
+lm_model <- lm(value ~ accent * fluent * question, data = data)
+summary(lm_model)
+# Diagnostic plots for the linear model
+par(mfrow = c(2, 2))
+plot(lm_model)
+par(mfrow = c(1, 1))
+
+# A more comprehensive regression model including attitudinal measures:
+full_model <- lm(value ~ accent * fluent * question + 
+                   professional_demeanour + presence_prejudice + imp_stand_lg,
+                 data = data)
+summary(full_model)
+# Model diagnostics for the full model
+par(mfrow = c(2, 2))
+plot(full_model)
+par(mfrow = c(1, 1))
+
+
+# ----------------------------
+# 5. Additional and Subgroup Analyses
+# ----------------------------
+
+# Exploratory: Relationship between attitudinal measures and ratings
+# Create a correlation matrix for continuous attitudinal measures and rating (value)
+attitudinal_vars <- data %>% 
+  select(value, professional_demeanour, presence_prejudice, imp_stand_lg, age)
+cor_matrix <- cor(attitudinal_vars, use = "complete.obs")
+print(cor_matrix)
+
+# Visualizing correlations using a pairs plot
+pairs(attitudinal_vars, main = "Scatterplot Matrix of Attitudinal Measures and Ratings")
+
+# Subgroup Analysis: For example, examining rating differences across genders
+ggplot(data, aes(x = gender, y = value, fill = gender)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Ratings by Gender",
+       x = "Gender", y = "Rating Value") +
+  theme_minimal()
+
+
+# ---------------------------
+# 6. Reporting and Interpretation
+# ---------------------------
+# At this stage, review the outputs from:
+#   - Descriptive statistics and plots to check for distribution patterns and outliers.
+#   - Mixed-effects and linear regression models to assess main effects and interactions.
+#   - Diagnostic plots to ensure model assumptions are met.
+#
+# Based on the significant results and observed patterns, you can then draw conclusions
+# regarding how variables (e.g., accent, fluent condition, legal expertise of the question) influence
+# the perceived ratings. Additional subgroup or sensitivity analyses can help further explore
+# nuanced differences in the data.
+#
+# Finally, document the analysis steps, report key findings, and discuss implications in your seminar paper.
