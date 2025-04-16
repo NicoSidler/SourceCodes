@@ -1,0 +1,35 @@
+With a sample of 12,880 answers, your data’s distribution is well represented and the large sample size mitigates concerns about mild deviations from normality. In your summary:
+
+- **Mean:** 4.23191  
+- **Median:** 4  
+- **SD:** 1.402534  
+- **Range:** 1 to 6  
+- **Skewness:** –0.5169409  
+- **Kurtosis:** –0.5759765
+
+A skewness of –0.52 (approximately) indicates a modest left skew and a kurtosis of about –0.58 suggests a somewhat flatter-than-normal (platykurtic) distribution. These values are not extreme—many guidelines consider absolute skewness values under 1 as acceptable for using parametric methods ([Statology](citeturn0search0); [iSixSigma](citeturn0search10)).
+
+### Suggested Test
+
+Given the characteristics of your data and the large sample size, a **parametric test** is appropriate. Specifically:
+
+- **If you are testing whether the sample mean differs from a specific value (a one-sample hypothesis):**  
+  Use a **one‑sample t‑test**. The t‑test is robust against moderate skewness with large samples, as the central limit theorem assures that the sampling distribution of the mean will be approximately normal.
+
+- **If you are comparing means between two or more groups:**  
+  Consider using an **independent samples t‑test** (for two groups) or **ANOVA** (for more than two groups). Both are robust under similar conditions.
+
+### Why Parametric Tests Work Here
+
+- **Robustness:** Parametric tests (like the t‑test) are known to be robust to mild violations of normality when sample sizes are large. With over 12,000 responses, even slight negative skewness is unlikely to distort the test’s Type I error rate significantly.
+- **Interpretability:** Likert items, especially when collected in large numbers, can be treated as approximating interval-level data. This is why many researchers use parametric tests even on individual Likert items or summed scales ([The Analysis Factor](citeturn0search18)).
+
+### Confirmation
+
+It is always a good idea to double-check assumptions by inspecting residual plots (if running regression or ANOVA) or Q‑Q plots for a one‑sample test. If you prefer to be extra cautious, you could run the non-parametric equivalent (e.g., the Wilcoxon signed-rank test for one-sample scenarios or Mann–Whitney U/Kruskal–Wallis for group comparisons) as a sensitivity analysis. However, with such a large sample, the parametric approach is generally favored.
+
+### Final Recommendation
+
+**I would suggest using a t‑test (one‑sample t‑test if testing against a hypothesized mean, or independent samples t‑test/ANOVA for group comparisons).** With 12,880 responses and only a modest left skew, the t‑test’s robustness makes it a solid choice for your inferential analysis.
+
+Does this approach and explanation address your query? Let me know if you need further clarification on any aspect.
