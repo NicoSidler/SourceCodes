@@ -53,7 +53,35 @@ colSums(is.na(data))
 
 # ------------------------------
 # 3. Descriptive Analysis
-# ------------------------------
+# ------------------------------Likert-scale-----------------------------------------------------
+# Install and load e1071 package if it's not already installed
+if(!require(e1071)) install.packages("e1071", dependencies = TRUE)
+library(e1071)
+
+# Compute descriptive statistics for the entire Likert-scale ratings
+descriptive_stats <- data %>% 
+  summarise(
+    Mean = mean(value, na.rm = TRUE),
+    Median = median(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Min = min(value, na.rm = TRUE),
+    Max = max(value, na.rm = TRUE),
+    Skewness = skewness(value, na.rm = TRUE),
+    Kurtosis = kurtosis(value, na.rm = TRUE)
+  )
+
+print(descriptive_stats)
+
+# Bar chart for Likert-scale
+ggplot(data, aes(x = factor(value))) +
+  geom_bar(fill = "chartreuse4", color = "black") +
+  scale_x_discrete(limits = c("1", "2", "3", "4", "5", "6")) +
+  labs(title = "Distribution of Likert Scale Ratings",
+       x = "Likert Scale Value",
+       y = "Number of Responses") +
+  theme_minimal(base_size = 8)
+
+#-------------------------------Likert-scale and traits-----------------------------------------
 
 # Univariate Analysis: Frequency tables for categorical variables
 table(data$accent)
@@ -66,6 +94,7 @@ table(data$education)
 table(data$gender)
 
 # Summary of continuous variables by trait (Likert rating: value)
+
 descriptive_stats <- data %>%
   group_by(trait) %>%
   summarise(
@@ -73,45 +102,26 @@ descriptive_stats <- data %>%
     Median = median(value, na.rm = TRUE),
     SD = sd(value, na.rm = TRUE),
     Min = min(value, na.rm = TRUE),
-    Max = max(value, na.rm = TRUE)
+    Max = max(value, na.rm = TRUE),
+    Skewness = skewness(value, na.rm = TRUE),
+    Kurtosis = kurtosis(value, na.rm = TRUE)
   )
+
 print(descriptive_stats)
 
-# Visualizing the distribution of Likert-scale ratings by trait
-ggplot(data, aes(x = value)) +
-  geom_histogram(binwidth = 1, fill = "lightblue", color = "black") +
+#Bar Chart for Likert scale by Trait
+ggplot(data, aes(x = factor(value))) +
+  geom_bar(fill = "chartreuse4", color = "black") +
   facet_wrap(~ trait) +
-  labs(title = "Distribution of Likert-scale Ratings by Trait",
-       x = "Rating Value", y = "Frequency")
+  scale_x_discrete(limits = c("1", "2", "3", "4", "5", "6")) +
+  labs(title = "Distribution of Likert Scale Ratings by Trait",
+       x = "Likert Scale Value",
+       y = "Number of Responses") +
+  theme_minimal(base_size = 8) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
 
 
-# create a boxplot for each trait
-ggplot(data, aes(x = trait, y = value)) +
-  geom_boxplot(outlier.colour = "red", outlier.shape = 16, outlier.size = 2) +
-  # Annotate median values (blue text), nudged upward
-  stat_summary(fun = median, geom = "text",
-               aes(label = round(..y.., 1)),
-               position = position_nudge(y = 0.5),
-               color = "blue", size = 3) +
-  # Annotate mean values (dark green text), nudged downward
-  stat_summary(fun = mean, geom = "text",
-               aes(label = round(..y.., 1)),
-               position = position_nudge(y = -0.5),
-               color = "darkgreen", size = 3) +
-  scale_x_discrete(labels = c(
-    "articulate" = "a",
-    "confident" = "c",
-    "do.well.interviews" = "dwi",
-    "knowledgeable" = "k",
-    "likely.to.succeed" = "lts",
-    "organised" = "o",
-    "pleasant" = "p",
-    "professional" = "pro"
-  )) +
-  labs(title = "Boxplot of Likert-scale Ratings by Trait",
-       x = "Trait", y = "Rating Value")
-
-#-----------------------------------------------------------------------------------------------------
+#--------------------------------------------Likert scale Fluency---------------------------------------------------------
 
 # Summary of continuous variables by fluency (Likert rating: value)
 descriptive_stats <- data %>%
@@ -121,157 +131,43 @@ descriptive_stats <- data %>%
     Median = median(value, na.rm = TRUE),
     SD = sd(value, na.rm = TRUE),
     Min = min(value, na.rm = TRUE),
-    Max = max(value, na.rm = TRUE)
+    Max = max(value, na.rm = TRUE),
+    Skewness = skewness(value, na.rm = TRUE),
+    Kurtosis = kurtosis(value, na.rm = TRUE)
   )
+
 print(descriptive_stats)
 
-# Visualizing the distribution of Likert-scale ratings by fluency
-ggplot(data, aes(x = value)) +
-  geom_histogram(binwidth = 1, fill = "coral3", color = "black") +
+
+#Bar Chart for Likert scale by fluency
+ggplot(data, aes(x = factor(value))) +
+  geom_bar(fill = "chartreuse4", color = "black") +
   facet_wrap(~ fluent) +
-  labs(title = "Distribution of Likert-scale Ratings by Fluency",
-       x = "Rating Value", y = "Frequency")
-
-# Create a boxplot for each fluency
-ggplot(data, aes(x = fluent, y = value)) +
-  geom_boxplot(outlier.colour = "red", outlier.shape = 16, outlier.size = 2) +
-  # Annotate median values (blue) nudged upward
-  stat_summary(fun = median, geom = "text",
-               aes(label = round(..y.., 1)),
-               position = position_nudge(y = 0.5),
-               color = "blue", size = 3) +
-  # Annotate mean values (dark green) nudged downward
-  stat_summary(fun = mean, geom = "text",
-               aes(label = round(..y.., 1)),
-               position = position_nudge(y = -0.5),
-               color = "darkgreen", size = 3) +
-  labs(title = "Boxplot of Likert-scale Ratings by Fluency",
-       x = "Fluency", y = "Rating Value")
-
-#-----------------------------------------------------------------
-
-# Boxplot for fluency for each trait (likert value)
-ggplot(data, aes(x = reorder(trait, value, FUN = mean), y = value)) +
-  geom_boxplot(outlier.shape = NA) +     # Remove outliers from display
-  facet_wrap(~ fluent) +                 # Create separate panels per fluency level
-  scale_x_discrete(labels = c(
-    "articulate"        = "a",
-    "confident"         = "c",
-    "do.well.interviews"= "dwi",
-    "knowledgeable"     = "k",
-    "likely.to.succeed" = "lts",
-    "organised"         = "o",
-    "pleasant"          = "p",
-    "professional"      = "pro"
-  )) +
-  labs(title = "Boxplot of Likert-scale Ratings by Trait (Sorted by Mean) for Fluency",
-       x = "Trait (sorted by mean value)",
-       y = "Rating Value") +
-  theme_minimal(base_size = 8)
-
-# BarChart for fluency for each trait (likert value)
-# Summarize median value for each combination of fluency and trait
-summ_df <- data %>% 
-  group_by(fluent, trait) %>% 
-  summarise(median_value = median(value, na.rm = TRUE)) %>% 
-  ungroup() %>% 
-  # Within each fluency group, reorder traits by their median value.
-  group_by(fluent) %>%
-  mutate(trait_order = factor(trait, levels = trait[order(median_value)])) %>%
-  ungroup()
-
-# Create the bar chart using the computed medians and reordered trait factor.
-ggplot(summ_df, aes(x = trait_order, y = median_value, fill = trait_order)) +
-  geom_bar(stat = "identity", show.legend = FALSE) +
-  facet_wrap(~ fluent, scales = "free_x") +
-  # Map the full trait names to abbreviations
-  scale_x_discrete(labels = c(
-    "articulate" = "a",
-    "confident" = "c",
-    "do.well.interviews" = "dwi",
-    "knowledgeable" = "k",
-    "likely.to.succeed" = "lts",
-    "organised" = "o",
-    "pleasant" = "p",
-    "professional" = "pro"
-  )) +
-  labs(title = "Barchart of Median Likert-scale Ratings by Trait for Fluency",
-       x = "Trait (sorted by median rating)",
-       y = "Median Rating") +
+  scale_x_discrete(limits = c("1", "2", "3", "4", "5", "6")) +
+  labs(title = "Distribution of Likert Scale Ratings by Trait",
+       x = "Likert Scale Value",
+       y = "Number of Responses") +
   theme_minimal(base_size = 8) +
-  # Rotate x-axis text for improved readability
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
 
-# Summarize mean value for each combination of fluency and trait
-summ_df <- data %>% 
-  group_by(fluent, trait) %>% 
-  summarise(mean_value = mean(value, na.rm = TRUE)) %>% 
-  ungroup() %>% 
-  # Within each fluency group, reorder traits by their mean value.
-  group_by(fluent) %>%
-  mutate(trait_order = factor(trait, levels = trait[order(mean_value)])) %>%
-  ungroup()
 
-# Create the bar chart using the computed means and reordered trait factor.
-ggplot(summ_df, aes(x = trait_order, y = mean_value, fill = trait_order)) +
-  geom_bar(stat = "identity", show.legend = FALSE) +
-  facet_wrap(~ fluent, scales = "free_x") +
-  # Map the full trait names to abbreviations
-  scale_x_discrete(labels = c(
-    "articulate"       = "a",
-    "confident"        = "c",
-    "do.well.interviews" = "dwi",
-    "knowledgeable"    = "k",
-    "likely.to.succeed"= "lts",
-    "organised"        = "o",
-    "pleasant"         = "p",
-    "professional"     = "pro"
-  )) +
-  labs(title = "Barchart of Mean Likert-scale Ratings by Trait for Fluency",
-       x = "Trait (sorted by mean rating)",
-       y = "Mean Rating") +
-  theme_minimal(base_size = 8) +
-  # Rotate x-axis text for improved readability
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-#-----------------------------------------------------------------------------------------------------------------
-# Summary of continuous variables by accent (Likert rating: value)
+# Compute descriptive statistics for Likert ratings by both fluency and trait
 descriptive_stats <- data %>%
-  group_by(accent) %>%
+  group_by(fluent, trait) %>%
   summarise(
     Mean = mean(value, na.rm = TRUE),
     Median = median(value, na.rm = TRUE),
     SD = sd(value, na.rm = TRUE),
     Min = min(value, na.rm = TRUE),
-    Max = max(value, na.rm = TRUE)
-  )
+    Max = max(value, na.rm = TRUE),
+    Skewness = skewness(value, na.rm = TRUE),
+    Kurtosis = kurtosis(value, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
 print(descriptive_stats)
 
-
-
-# Visualizing the distribution of Likert-scale ratings by Accent
-ggplot(data, aes(x = value)) +
-  geom_histogram(binwidth = 1, fill = "chartreuse4", color = "black") +
-  facet_wrap(~ accent) +
-  labs(title = "Distribution of Likert-scale Ratings by Accent",
-       x = "Rating Value", y = "Frequency")
-
-# Create a boxplot for each accent
-
-ggplot(data, aes(x = accent, y = value)) +
-  geom_boxplot(outlier.colour = "red", outlier.shape = 16, outlier.size = 2) +
-  # Add median values (blue text) nudged upward
-  stat_summary(fun = median, geom = "text",
-               aes(label = round(..y.., 1)),
-               position = position_nudge(y = 0.5),
-               color = "blue", size = 3) +
-  # Add mean values (dark green text) nudged downward
-  stat_summary(fun = mean, geom = "text",
-               aes(label = round(..y.., 1)),
-               position = position_nudge(y = -0.5),
-               color = "darkgreen", size = 3) +
-  labs(title = "Boxplot of Likert-scale Ratings by Accent",
-       x = "Accent", y = "Rating Value")
+#--------------------------------------------Likert scale question---------------------------------------------------------
 
 # Summary of continuous variables by question (Likert rating: value)
 descriptive_stats <- data %>%
@@ -281,34 +177,89 @@ descriptive_stats <- data %>%
     Median = median(value, na.rm = TRUE),
     SD = sd(value, na.rm = TRUE),
     Min = min(value, na.rm = TRUE),
-    Max = max(value, na.rm = TRUE)
+    Max = max(value, na.rm = TRUE),
+    Skewness = skewness(value, na.rm = TRUE),
+    Kurtosis = kurtosis(value, na.rm = TRUE)
   )
+
 print(descriptive_stats)
 
-# Visualizing the distribution of Likert-scale ratings by question
-ggplot(data, aes(x = value)) +
-  geom_histogram(binwidth = 1, fill = "bisque2", color = "black") +
+
+#Bar Chart for Likert scale by question
+ggplot(data, aes(x = factor(value))) +
+  geom_bar(fill = "chartreuse4", color = "black") +
   facet_wrap(~ question) +
-  labs(title = "Distribution of Likert-scale Ratings by Question",
-       x = "Rating Value", y = "Frequency")
+  scale_x_discrete(limits = c("1", "2", "3", "4", "5", "6")) +
+  labs(title = "Distribution of Likert Scale Ratings by Trait",
+       x = "Likert Scale Value",
+       y = "Number of Responses") +
+  theme_minimal(base_size = 8) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
 
-# Create a boxplot for each question
 
-ggplot(data, aes(x = question, y = value)) +
-  geom_boxplot(outlier.colour = "red", outlier.shape = 16, outlier.size = 2) +
-  # Annotate the median (blue text), nudged slightly upward
-  stat_summary(fun = median, geom = "text",
-               aes(label = round(..y.., 1)),
-               position = position_nudge(y = 0.5),
-               color = "blue", size = 3) +
-  # Annotate the mean (dark green text), nudged slightly downward
-  stat_summary(fun = mean, geom = "text",
-               aes(label = round(..y.., 1)),
-               position = position_nudge(y = -0.5),
-               color = "darkgreen", size = 3) +
-  labs(title = "Boxplot of Likert-scale Ratings by Question",
-       x = "Question", y = "Rating Value")
+# Compute descriptive statistics for Likert ratings by both fluency and trait
+descriptive_stats <- data %>%
+  group_by(question, trait) %>%
+  summarise(
+    Mean = mean(value, na.rm = TRUE),
+    Median = median(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Min = min(value, na.rm = TRUE),
+    Max = max(value, na.rm = TRUE),
+    Skewness = skewness(value, na.rm = TRUE),
+    Kurtosis = kurtosis(value, na.rm = TRUE)
+  ) %>%
+  ungroup()
 
+print(descriptive_stats)
+
+#--------------------------------------------Likert scale accent---------------------------------------------------------
+
+# Summary of continuous variables by accent (Likert rating: value)
+descriptive_stats <- data %>%
+  group_by(accent) %>%
+  summarise(
+    Mean = mean(value, na.rm = TRUE),
+    Median = median(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Min = min(value, na.rm = TRUE),
+    Max = max(value, na.rm = TRUE),
+    Skewness = skewness(value, na.rm = TRUE),
+    Kurtosis = kurtosis(value, na.rm = TRUE)
+  )
+
+print(descriptive_stats)
+
+
+#Bar Chart for Likert scale by question
+ggplot(data, aes(x = factor(value))) +
+  geom_bar(fill = "chartreuse4", color = "black") +
+  facet_wrap(~ accent) +
+  scale_x_discrete(limits = c("1", "2", "3", "4", "5", "6")) +
+  labs(title = "Distribution of Likert Scale Ratings by Trait",
+       x = "Likert Scale Value",
+       y = "Number of Responses") +
+  theme_minimal(base_size = 8) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+
+
+# Compute descriptive statistics for Likert ratings by both fluency and trait
+descriptive_stats <- data %>%
+  group_by(accent, trait) %>%
+  summarise(
+    Mean = mean(value, na.rm = TRUE),
+    Median = median(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Min = min(value, na.rm = TRUE),
+    Max = max(value, na.rm = TRUE),
+    Skewness = skewness(value, na.rm = TRUE),
+    Kurtosis = kurtosis(value, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+print(descriptive_stats, n = 40)
+
+#--------------------------------------------Likert scale gender---------------------------------------------------------
 
 # Summary of continuous variables by gender (Likert rating: value)
 descriptive_stats <- data %>%
@@ -318,17 +269,43 @@ descriptive_stats <- data %>%
     Median = median(value, na.rm = TRUE),
     SD = sd(value, na.rm = TRUE),
     Min = min(value, na.rm = TRUE),
-    Max = max(value, na.rm = TRUE)
+    Max = max(value, na.rm = TRUE),
+    Skewness = skewness(value, na.rm = TRUE),
+    Kurtosis = kurtosis(value, na.rm = TRUE)
   )
+
 print(descriptive_stats)
 
 
-# Visualizing the distribution of Likert-scale ratings by gender (confouding?)
-ggplot(data, aes(x = value)) +
-  geom_histogram(binwidth = 1, fill = "bisque2", color = "black") +
+#Bar Chart for Likert scale by gender
+ggplot(data, aes(x = factor(value))) +
+  geom_bar(fill = "chartreuse4", color = "black") +
   facet_wrap(~ gender) +
-  labs(title = "Distribution of Likert-scale Ratings by Gender",
-       x = "Rating Value", y = "Frequency")
+  scale_x_discrete(limits = c("1", "2", "3", "4", "5", "6")) +
+  labs(title = "Distribution of Likert Scale Ratings by Trait",
+       x = "Likert Scale Value",
+       y = "Number of Responses") +
+  theme_minimal(base_size = 8) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+
+
+# Compute descriptive statistics for Likert ratings by both gender and trait
+descriptive_stats <- data %>%
+  group_by(gender, trait) %>%
+  summarise(
+    Mean = mean(value, na.rm = TRUE),
+    Median = median(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Min = min(value, na.rm = TRUE),
+    Max = max(value, na.rm = TRUE),
+    Skewness = skewness(value, na.rm = TRUE),
+    Kurtosis = kurtosis(value, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+print(descriptive_stats, n = 32)
+
+#--------------------------------------------Likert scale education---------------------------------------------------------
 
 # Summary of continuous variables by education (Likert rating: value)
 descriptive_stats <- data %>%
@@ -338,22 +315,76 @@ descriptive_stats <- data %>%
     Median = median(value, na.rm = TRUE),
     SD = sd(value, na.rm = TRUE),
     Min = min(value, na.rm = TRUE),
-    Max = max(value, na.rm = TRUE)
+    Max = max(value, na.rm = TRUE),
+    Skewness = skewness(value, na.rm = TRUE),
+    Kurtosis = kurtosis(value, na.rm = TRUE)
   )
+
 print(descriptive_stats)
 
-# Visualizing the distribution of Likert-scale ratings by education (confouding?)
-ggplot(data, aes(x = value)) +
-  geom_histogram(binwidth = 1, fill = "bisque2", color = "black") +
-  facet_wrap(~ education) +
-  labs(title = "Distribution of Likert-scale Ratings by Education",
-       x = "Rating Value", y = "Frequency")
 
-# Boxplot for detecting potential outliers in ratings
-ggplot(data, aes(x = trait, y = value)) +
-  geom_boxplot(fill = "lightgreen") +
-  labs(title = "Boxplot of Ratings by Trait",
-       x = "Trait", y = "Rating Value")
+#Bar Chart for Likert scale by education
+ggplot(data, aes(x = factor(value))) +
+  geom_bar(fill = "chartreuse4", color = "black") +
+  facet_wrap(~ education) +
+  scale_x_discrete(limits = c("1", "2", "3", "4", "5", "6")) +
+  labs(title = "Distribution of Likert Scale Ratings by Trait",
+       x = "Likert Scale Value",
+       y = "Number of Responses") +
+  theme_minimal(base_size = 8) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+
+
+# Compute descriptive statistics for Likert ratings by both education and trait
+descriptive_stats <- data %>%
+  group_by(education, trait) %>%
+  summarise(
+    Mean = mean(value, na.rm = TRUE),
+    Median = median(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Min = min(value, na.rm = TRUE),
+    Max = max(value, na.rm = TRUE),
+    Skewness = skewness(value, na.rm = TRUE),
+    Kurtosis = kurtosis(value, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+print(descriptive_stats, n = 40)
+
+----------------------------------------Likert-scale age---------------------------------------------------
+
+  #------------------------------------------------------------------
+# Step 1. Create Age Groups (10-Year Intervals up to age 74)
+#------------------------------------------------------------------
+
+# Here we assume that the minimum age is, for example, 18.
+# We want to create intervals that cover [18,28), [28,38), ..., [68,75) so that age 74 falls in the final interval.
+data <- data %>%
+  mutate(age_group = cut(age,
+                         breaks = c(seq(floor(min(age, na.rm = TRUE)), 74, by = 10), 75),
+                         right = FALSE,         # left-closed, right-open intervals: [x, x+10)
+                         include.lowest = TRUE))  # include the lowest age
+
+#------------------------------------------------------------------
+# Step 2. Compute Descriptive Statistics for Likert Evaluations by Age Group
+#------------------------------------------------------------------
+
+age_evaluation_stats <- data %>%
+  group_by(age_group) %>%
+  summarise(
+    Count    = n(),
+    Mean     = mean(value, na.rm = TRUE),
+    Median   = median(value, na.rm = TRUE),
+    SD       = sd(value, na.rm = TRUE),
+    Min      = min(value, na.rm = TRUE),
+    Max      = max(value, na.rm = TRUE),
+    Skewness = skewness(value, na.rm = TRUE),
+    Kurtosis = kurtosis(value, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+print(age_evaluation_stats)
+
 
 # Bivariate Analysis: Cross-tabulations and comparisons
 # For example, cross-tabulate accent and question type
