@@ -83,7 +83,7 @@ ggplot(data, aes(x = factor(value))) +
 
 #-------------------------------Likert-scale and traits-----------------------------------------
 
-# Univariate Analysis: Frequency tables for categorical variables
+# Univariate Analysis: Frequency tables for categorical variables, age numbers later under Likert-scale age
 table(data$accent)
 prop.table(table(data$accent))  # Percentages
 
@@ -92,6 +92,8 @@ table(data$question)
 table(data$trait)
 table(data$education)
 table(data$gender)
+table(data$ethnicity)
+table(data$region)
 
 # Summary of continuous variables by trait (Likert rating: value)
 
@@ -351,6 +353,96 @@ descriptive_stats <- data %>%
 
 print(descriptive_stats, n = 40)
 
+#--------------------------------------------Likert scale ethnicity---------------------------------------------------------
+
+# Summary of continuous variables by question (Likert rating: value)
+descriptive_stats <- data %>%
+  group_by(ethnicity) %>%
+  summarise(
+    Mean = mean(value, na.rm = TRUE),
+    Median = median(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Min = min(value, na.rm = TRUE),
+    Max = max(value, na.rm = TRUE),
+    Skewness = skewness(value, na.rm = TRUE),
+    Kurtosis = kurtosis(value, na.rm = TRUE)
+  )
+
+print(descriptive_stats)
+
+
+#Bar Chart for Likert scale by ethnicity
+ggplot(data, aes(x = factor(value))) +
+  geom_bar(fill = "chartreuse4", color = "black") +
+  facet_wrap(~ ethnicity) +
+  scale_x_discrete(limits = c("1", "2", "3", "4", "5", "6")) +
+  labs(title = "Distribution of Likert Scale Ratings by Trait",
+       x = "Likert Scale Value",
+       y = "Number of Responses") +
+  theme_minimal(base_size = 8) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+
+
+# Compute descriptive statistics for Likert ratings by both ethnicity and trait
+descriptive_stats <- data %>%
+  group_by(ethnicity, trait) %>%
+  summarise(
+    Mean = mean(value, na.rm = TRUE),
+    Median = median(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Min = min(value, na.rm = TRUE),
+    Max = max(value, na.rm = TRUE),
+    Skewness = skewness(value, na.rm = TRUE),
+    Kurtosis = kurtosis(value, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+print(descriptive_stats, n = 48)
+#--------------------------------------------Likert scale region---------------------------------------------------------
+
+# Summary of continuous variables by region (Likert rating: value)
+descriptive_stats <- data %>%
+  group_by(region) %>%
+  summarise(
+    Mean = mean(value, na.rm = TRUE),
+    Median = median(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Min = min(value, na.rm = TRUE),
+    Max = max(value, na.rm = TRUE),
+    Skewness = skewness(value, na.rm = TRUE),
+    Kurtosis = kurtosis(value, na.rm = TRUE)
+  )
+
+print(descriptive_stats)
+
+
+#Bar Chart for Likert scale by region
+ggplot(data, aes(x = factor(value))) +
+  geom_bar(fill = "chartreuse4", color = "black") +
+  facet_wrap(~ region) +
+  scale_x_discrete(limits = c("1", "2", "3", "4", "5", "6")) +
+  labs(title = "Distribution of Likert Scale Ratings by Trait",
+       x = "Likert Scale Value",
+       y = "Number of Responses") +
+  theme_minimal(base_size = 8) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+
+
+# Compute descriptive statistics for Likert ratings by both region and trait
+descriptive_stats <- data %>%
+  group_by(region, trait) %>%
+  summarise(
+    Mean = mean(value, na.rm = TRUE),
+    Median = median(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Min = min(value, na.rm = TRUE),
+    Max = max(value, na.rm = TRUE),
+    Skewness = skewness(value, na.rm = TRUE),
+    Kurtosis = kurtosis(value, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+print(descriptive_stats)
 ----------------------------------------Likert-scale age---------------------------------------------------
 
   #------------------------------------------------------------------
