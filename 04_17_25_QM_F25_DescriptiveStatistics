@@ -22,8 +22,17 @@ data <- read.csv(data_path, stringsAsFactors = FALSE)
 str(data)
 summary(data)
 
+# ---------------------------
+# 2. Participant Count
+# ---------------------------
 
-# ----------------------------------------
+# Calculate the number of unique participants based on Participant.ID
+num_participants <- length(unique(data$participant_ID))
+
+# Display the participant count
+cat("Number of participants:", num_participants, "\n")
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------------
 # 2. Data Cleaning and Preparation
 # ----------------------------------------
 # Convert variables to appropriate types based on the data description
@@ -84,16 +93,32 @@ ggplot(data, aes(x = factor(value))) +
 #-------------------------------Likert-scale and traits-----------------------------------------
 
 # Univariate Analysis: Frequency tables for categorical variables, age numbers later under Likert-scale age
-table(data$accent)
-prop.table(table(data$accent))  # Percentages
 
-table(data$fluent)
-table(data$question)
-table(data$trait)
-table(data$education)
-table(data$gender)
-table(data$ethnicity)
-table(data$region)
+#-----------
+#  Deduplicate to one row per participant, keeping their first answer
+#    (works for both numeric/factor/character vars)
+library(dplyr)
+data_unique <- data %>%
+  distinct(participant_ID, .keep_all = TRUE)
+
+# 3. List of your categorical vars
+vars <- c("accent", "fluent", "question", "trait",
+          "education", "gender", "ethnicity", "region")
+
+# 4. Loop to print frequency tables and percentages
+for (v in vars) {
+  cat("\n==============================\n")
+  cat("Variable:", v, "\n")
+  cat("------------------------------\n")
+  
+  tbl <- table(data_unique[[v]], useNA = "ifany")
+  print(tbl)
+  
+  pct <- prop.table(tbl) * 100
+  pct_rounded <- round(pct, 1)
+  cat("\nPercentages:\n")
+  print(pct_rounded)
+}
 
 # Summary of continuous variables by trait (Likert rating: value)
 
