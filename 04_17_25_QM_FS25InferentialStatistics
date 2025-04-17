@@ -1,0 +1,235 @@
+------------------- Fluency: Paired t-test and Cohen's D-----------------
+
+# 0) Install & load packages
+pkgs <- c("dplyr", "tidyr")
+invisible(lapply(pkgs, function(p) {
+  if (!require(p, character.only = TRUE)) {
+    install.packages(p, dependencies = TRUE)
+    library(p, character.only = TRUE)
+  }
+}))
+
+# 1) Loop over traits
+trait_results <- lapply(sort(unique(data$trait)), function(tr) {
+  d <- filter(data, trait == tr)
+  
+  # Prepare paired data
+  paired <- d %>%
+    group_by(participant_ID, fluent) %>%
+    summarise(mean_val = mean(value, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = fluent, values_from = mean_val) %>%
+    filter(!is.na(F) & !is.na(D))
+  
+  # Paired t-test
+  t_test <- t.test(paired$D, paired$F, paired = TRUE)
+  p_ttest <- t_test$p.value
+  
+  # Cohen's d for paired data
+  diffs <- paired$D - paired$F
+  cohen_d <- if (length(diffs) > 1) mean(diffs) / sd(diffs) else NA_real_
+  
+  # Return results
+  data.frame(
+    trait           = tr,
+    F_mean          = round(mean(paired$F, na.rm = TRUE), 3),
+    D_mean          = round(mean(paired$D, na.rm = TRUE), 3),
+    diff_D_minus_F  = round(mean(diffs, na.rm = TRUE), 3),
+    ttest_p         = round(p_ttest, 3),
+    cohens_d        = round(cohen_d, 3),
+    stringsAsFactors = FALSE
+  )
+})
+
+# 2) Combine and view
+trait_summary <- do.call(rbind, trait_results)
+print(trait_summary)
+
+
+
+#-----------------------------ANOVA and Bonferroni for Accent----------------------
+
+# Required packages
+pkgs <- c("dplyr", "afex", "emmeans")
+invisible(lapply(pkgs, function(p) {
+  if (!require(p, character.only = TRUE)) {
+    install.packages(p, dependencies = TRUE)
+    library(p, character.only = TRUE)
+  }
+}))
+
+# Run repeated-measures ANOVA
+anova_result <- afex::aov_ez(
+  id = "participant_ID",
+  dv = "value",
+  data = data,
+  within = "accent",  # 5-level IV
+  fun_aggregate = mean,
+  return = "afex_aov"
+)
+
+# See ANOVA table
+print(afex::nice(anova_result))
+
+# Post-hoc comparisons (Tukey-style pairwise comparisons)
+em <- emmeans::emmeans(anova_result, ~accent)
+contrast_results <- emmeans::contrast(em, method = "pairwise", adjust = "bonferroni")
+summary(contrast_results)
+
+
+#--EE-RP comparison (they are significant in the ANOVA)-----------------
+
+# ─── 1. Load & install required packages ─────────────────────────────────────
+pkgs <- c("dplyr", "afex", "emmeans", "broom", "tidyr")
+invisible(lapply(pkgs, function(p) {
+  if (!requireNamespace(p, quietly = TRUE)) install.packages(p, dependencies = TRUE)
+  library(p, character.only = TRUE)
+}))
+
+# ─── 2. Helper: extract the 'accent' p-value from the afex table ─────────────
+get_accent_p <- function(aov_tab) {
+  p_col <- intersect(c("Pr(>F)", "p.value"), colnames(aov_tab))
+  if (length(p_col) == 0) return(NA_real_)
+  idx  <- grepl("^accent$", aov_tab$Effect, ignore.case = TRUE)
+  vals <- aov_tab[[p_col]][idx]
+  if (length(vals) > 0) vals[1] else NA_real_
+}
+
+# ─── 3. Loop over traits & build EE vs RP summary ─────────────────────────────
+ee_rp_results <- lapply(sort(unique(data$trait)), function(tr) {
+  d <- data %>% filter(trait == tr)
+
+  # skip if missing one of the two accents
+  if (!all(c("EE", "RP") %in% unique(d$accent))) {
+    warning(sprintf("Trait '%s' missing EE or RP—skipping.", tr))
+    return(NULL)
+  }
+
+  # 3.1 Repeated‑measures ANOVA
+  m <- afex::aov_ez(
+    id            = "participant_ID",
+    dv            = "value",
+    data          = d,
+    within        = "accent",
+    fun_aggregate = mean,
+    return        = "afex_aov"
+  )
+
+  # 3.2 Extract the ANOVA p-value
+  aov_tab <- afex::nice(m)
+  anova_p <- get_accent_p(aov_tab)
+
+  # 3.3 Tukey‑adjusted pairwise contrasts
+  em    <- emmeans::emmeans(m, ~accent)
+  ph    <- emmeans::contrast(em, method = "pairwise", adjust = "tukey")
+  ph_df <- broom::tidy(ph)
+
+  # dynamically detect the p‑value column and copy into adj.p.value
+  possible_p <- names(ph_df)[grepl("p", tolower(names(ph_df)))]
+  # keep only numeric p‑like columns
+  possible_p <- possible_p[sapply(ph_df[possible_p], is.numeric)]
+  if (length(possible_p) == 0) {
+    warning(sprintf("Trait '%s': no p‑value column in pairwise results—setting adj.p.value = NA", tr))
+    ph_df$adj.p.value <- NA_real_
+  } else {
+    # prefer the exact 'p.value' if present
+    sel <- if ("p.value" %in% possible_p) "p.value" else possible_p[1]
+    ph_df$adj.p.value <- ph_df[[sel]]
+  }
+
+  # keep only EE vs RP contrasts, flip if needed, and add metadata
+  out <- ph_df %>%
+    filter(contrast %in% c("EE - RP", "RP - EE")) %>%
+    mutate(
+      estimate = ifelse(contrast == "RP - EE", -estimate, estimate),
+      contrast = "EE - RP",
+      trait    = tr,
+      anova_p  = anova_p
+    )
+
+  # 3.4 Compute paired Cohen's d for EE vs RP
+  paired <- d %>%
+    filter(accent %in% c("EE", "RP")) %>%
+    group_by(participant_ID, accent) %>%
+    summarise(mean_val = mean(value, na.rm = TRUE), .groups = "drop") %>%
+    tidyr::pivot_wider(names_from = accent, values_from = mean_val) %>%
+    filter(!is.na(EE), !is.na(RP))
+
+  diffs <- paired$EE - paired$RP
+  out$cohens_d <- if (length(diffs) > 1) round(mean(diffs) / sd(diffs), 3) else NA_real_
+
+  out
+})
+
+# ─── 4. Combine & display ────────────────────────────────────────────────────
+ee_rp_summary <- do.call(rbind, ee_rp_results)
+
+ee_rp_summary %>%
+  select(trait, estimate, adj.p.value, cohens_d, anova_p) %>%
+  print()
+
+#--------------------Accent other possibilities (Tukey's HSD)------------------------
+# 0) Install & load packages
+pkgs <- c("dplyr", "afex", "emmeans")
+invisible(lapply(pkgs, function(p) {
+  if (!require(p, character.only = TRUE)) {
+    install.packages(p, dependencies = TRUE)
+    library(p, character.only = TRUE)
+  }
+}))
+
+# 1) Run repeated-measures ANOVA
+anova_result <- afex::aov_ez(
+  id = "participant_ID",    # participant identifier
+  dv = "value",             # dependent variable
+  data = data,              # your dataset
+  within = "accent",        # within-subject factor
+  fun_aggregate = mean,     # average across multiple trials per participant
+  return = "afex_aov"
+)
+
+# 2) View ANOVA table
+print(afex::nice(anova_result))
+
+# 3) Post-hoc pairwise comparisons: Tukey's HSD
+em <- emmeans::emmeans(anova_result, ~accent)
+tukey_results <- emmeans::contrast(em, method = "tukey")
+summary(tukey_results)
+
+
+
+
+#----------Extra
+#-------------------------------------- Cohe's D ---------------------------------------------------------
+
+library(dplyr)
+library(tidyr)
+
+# Compute per-participant mean rating by trait and fluency
+paired <- data %>%
+  group_by(participant_ID, trait, fluent) %>%
+  summarise(mean_val = mean(value, na.rm=TRUE), .groups="drop") %>%
+  pivot_wider(names_from = fluent, values_from = mean_val) %>%
+  filter(!is.na(F) & !is.na(D))  # keep only those with both F and D
+
+# Compute Cohen's d per trait
+cohen_d_trait <- paired %>%
+  group_by(trait) %>%
+  summarise(
+    m_diff  = mean(D - F),
+    sd_diff = sd(D - F),
+    cohen_d = m_diff / sd_diff
+  )
+
+print(cohen_d_trait)
+
+
+
+
+#------------------Anova for each trait-------------------
+
+# Example for the 'articulate' trait
+m_art <- afex::aov_ez("participant_ID", "value", data %>% filter(trait=="articulate"), within="fluent")
+afex::nice(m_art)
+
+
+
