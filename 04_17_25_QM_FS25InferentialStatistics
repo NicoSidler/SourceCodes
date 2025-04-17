@@ -1,0 +1,73 @@
+# ----------------------------------
+# 4. Inferential Statistical Analysis
+# ----------------------------------
+
+# Given that each respondent provides multiple ratings, a mixed-effects model is appropriate.
+# Here, the dependent variable is "value" and predictors include accent, fluent, and question.
+# We include a random intercept for participant_ID to account for repeated measures.
+mixed_model <- lmer(value ~ accent * fluent * question + (1 | participant_ID), 
+                    data = data, REML = FALSE)
+summary(mixed_model)
+
+# Check model assumptions: residual plots and Q-Q plot
+par(mfrow = c(1, 2))
+plot(resid(mixed_model), main = "Residuals Plot", ylab = "Residuals", xlab = "Index")
+qqnorm(resid(mixed_model), main = "Normal Q-Q Plot of Residuals")
+qqline(resid(mixed_model))
+par(mfrow = c(1, 1))
+
+# Alternatively, if you prefer a simple regression model ignoring repeated measures:
+lm_model <- lm(value ~ accent * fluent * question, data = data)
+summary(lm_model)
+# Diagnostic plots for the linear model
+par(mfrow = c(2, 2))
+plot(lm_model)
+par(mfrow = c(1, 1))
+
+# A more comprehensive regression model including attitudinal measures:
+full_model <- lm(value ~ accent * fluent * question + 
+                   professional_demeanour + presence_prejudice + imp_stand_lg,
+                 data = data)
+summary(full_model)
+# Model diagnostics for the full model
+par(mfrow = c(2, 2))
+plot(full_model)
+par(mfrow = c(1, 1))
+
+
+# ----------------------------
+# 5. Additional and Subgroup Analyses
+# ----------------------------
+
+# Exploratory: Relationship between attitudinal measures and ratings
+# Create a correlation matrix for continuous attitudinal measures and rating (value)
+attitudinal_vars <- data %>% 
+  select(value, professional_demeanour, presence_prejudice, imp_stand_lg, age)
+cor_matrix <- cor(attitudinal_vars, use = "complete.obs")
+print(cor_matrix)
+
+# Visualizing correlations using a pairs plot
+pairs(attitudinal_vars, main = "Scatterplot Matrix of Attitudinal Measures and Ratings")
+
+# Subgroup Analysis: For example, examining rating differences across genders
+ggplot(data, aes(x = gender, y = value, fill = gender)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Ratings by Gender",
+       x = "Gender", y = "Rating Value") +
+  theme_minimal()
+
+
+# ---------------------------
+# 6. Reporting and Interpretation
+# ---------------------------
+# At this stage, review the outputs from:
+#   - Descriptive statistics and plots to check for distribution patterns and outliers.
+#   - Mixed-effects and linear regression models to assess main effects and interactions.
+#   - Diagnostic plots to ensure model assumptions are met.
+#
+# Based on the significant results and observed patterns, you can then draw conclusions
+# regarding how variables (e.g., accent, fluent condition, legal expertise of the question) influence
+# the perceived ratings. Additional subgroup or sensitivity analyses can help further explore
+# nuanced differences in the data.
+#
+# Finally, document the analysis steps, report key findings, and discuss implications in your seminar paper.
