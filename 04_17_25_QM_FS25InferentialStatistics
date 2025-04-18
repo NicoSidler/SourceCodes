@@ -1,4 +1,4 @@
-------------------- Fluency: Paired t-test and Cohen's D-----------------
+#------------------- Fluency: Paired t-test and Cohen's D-----------------
 
 # 0) Install & load packages
 pkgs <- c("dplyr", "tidyr")
@@ -44,6 +44,48 @@ trait_results <- lapply(sort(unique(data$trait)), function(tr) {
 trait_summary <- do.call(rbind, trait_results)
 print(trait_summary)
 
+#--ANOVA and Bonferroni (also Fluency, but more complex modell)
+# 0) Install & load required packages
+pkgs <- c("dplyr", "tidyr", "afex", "emmeans")
+invisible(lapply(pkgs, function(p) {
+  if (!requireNamespace(p, quietly = TRUE)) {
+    install.packages(p, dependencies = TRUE)
+  }
+  library(p, character.only = TRUE)
+}))
+
+# 1) Compute each participant’s mean rating per trait × fluency
+summary_data <- data %>%
+  group_by(participant_ID, trait, fluent) %>%
+  summarise(
+    mean_rating = mean(value, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    participant_ID = factor(participant_ID),
+    trait          = factor(trait),
+    # ensure “D” (Disfluent) and “F” (Fluent) are ordered consistently
+    fluent         = factor(fluent, levels = c("D", "F"))
+  )
+
+# 2) Run the 2 (Fluency: D vs. F) × 8 (Trait) repeated‑measures ANOVA
+anova_model <- aov_ez(
+  id      = "participant_ID",    # subject identifier
+  dv      = "mean_rating",       # dependent variable
+  data    = summary_data,
+  within  = c("fluent", "trait"),
+  type    = 3                    # Type III sums of squares
+)
+
+# 3) View the omnibus ANOVA table
+print(anova_model)
+
+# 4) Post‑hoc paired comparisons (Fluent vs. Disfluent) within each trait
+emm <- emmeans(anova_model, ~ fluent | trait)
+posthoc <- contrast(emm, method = "pairwise", adjust = "bonferroni")
+
+# 5) Display the post‑hoc results
+print(posthoc)
 
 
 #-----------------------------ANOVA and Bonferroni for Accent----------------------
@@ -194,42 +236,4 @@ print(afex::nice(anova_result))
 em <- emmeans::emmeans(anova_result, ~accent)
 tukey_results <- emmeans::contrast(em, method = "tukey")
 summary(tukey_results)
-
-
-
-
-#----------Extra
-#-------------------------------------- Cohe's D ---------------------------------------------------------
-
-library(dplyr)
-library(tidyr)
-
-# Compute per-participant mean rating by trait and fluency
-paired <- data %>%
-  group_by(participant_ID, trait, fluent) %>%
-  summarise(mean_val = mean(value, na.rm=TRUE), .groups="drop") %>%
-  pivot_wider(names_from = fluent, values_from = mean_val) %>%
-  filter(!is.na(F) & !is.na(D))  # keep only those with both F and D
-
-# Compute Cohen's d per trait
-cohen_d_trait <- paired %>%
-  group_by(trait) %>%
-  summarise(
-    m_diff  = mean(D - F),
-    sd_diff = sd(D - F),
-    cohen_d = m_diff / sd_diff
-  )
-
-print(cohen_d_trait)
-
-
-
-
-#------------------Anova for each trait-------------------
-
-# Example for the 'articulate' trait
-m_art <- afex::aov_ez("participant_ID", "value", data %>% filter(trait=="articulate"), within="fluent")
-afex::nice(m_art)
-
-
 
