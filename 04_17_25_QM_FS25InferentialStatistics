@@ -44,9 +44,10 @@ trait_results <- lapply(sort(unique(data$trait)), function(tr) {
 trait_summary <- do.call(rbind, trait_results)
 print(trait_summary)
 
-#--ANOVA and Bonferroni (also Fluency, but more complex modell)
+#--ANOVA and Bonferroni (also Fluency, but more complex model)
+
 # 0) Install & load required packages
-pkgs <- c("dplyr", "tidyr", "afex", "emmeans")
+pkgs <- c("dplyr", "tidyr", "afex", "emmeans", "car", "ggplot2")
 invisible(lapply(pkgs, function(p) {
   if (!requireNamespace(p, quietly = TRUE)) {
     install.packages(p, dependencies = TRUE)
@@ -64,11 +65,10 @@ summary_data <- data %>%
   mutate(
     participant_ID = factor(participant_ID),
     trait          = factor(trait),
-    # ensure “D” (Disfluent) and “F” (Fluent) are ordered consistently
-    fluent         = factor(fluent, levels = c("D", "F"))
+    fluent         = factor(fluent, levels = c("D", "F"))  # Ensure "D" (Disfluent) and "F" (Fluent) order
   )
 
-# 2) Run the 2 (Fluency: D vs. F) × 8 (Trait) repeated‑measures ANOVA
+# 2) Run the 2 (Fluency: D vs. F) × 8 (Trait) repeated-measures ANOVA
 anova_model <- aov_ez(
   id      = "participant_ID",    # subject identifier
   dv      = "mean_rating",       # dependent variable
@@ -80,12 +80,53 @@ anova_model <- aov_ez(
 # 3) View the omnibus ANOVA table
 print(anova_model)
 
-# 4) Post‑hoc paired comparisons (Fluent vs. Disfluent) within each trait
+# 4) Check assumptions
+
+## 4a) Normality of residuals (visual check only, no Shapiro-Wilk because n > 5000)
+residuals_anova <- residuals(anova_model$lm)
+
+# Histogram of residuals
+hist(residuals_anova,
+     main = "Histogram of Residuals",
+     xlab = "Residuals",
+     breaks = 30,
+     col = "lightgray",
+     border = "black")
+lines(density(residuals_anova), col = "blue", lwd = 2)
+
+# Correct QQ plot (manual method, fixing the 'sample' naming issue)
+# Create theoretical quantiles and residual values
+qq_data <- qqnorm(residuals_anova, plot.it = FALSE)
+
+# Carefully convert to a clean dataframe
+qq_df <- data.frame(
+  theoretical = as.numeric(qq_data$x),
+  residual_value = as.numeric(qq_data$y)
+)
+
+# Plot QQ plot with ggplot2
+ggplot(qq_df, aes(x = theoretical, y = residual_value)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  labs(title = "QQ Plot of Residuals",
+       x = "Theoretical Quantiles",
+       y = "Sample Quantiles") +
+  theme_minimal()
+
+## 4b) Homogeneity of variances (Levene's Test)
+# Create a grouping variable combining trait and fluency
+summary_data$grouping <- interaction(summary_data$trait, summary_data$fluent)
+
+cat("\nLevene's Test for homogeneity of variances:\n")
+print(leveneTest(mean_rating ~ grouping, data = summary_data))
+
+# 5) Post‑hoc paired comparisons (Fluent vs. Disfluent) within each trait
 emm <- emmeans(anova_model, ~ fluent | trait)
 posthoc <- contrast(emm, method = "pairwise", adjust = "bonferroni")
 
-# 5) Display the post‑hoc results
+# 6) Display the post‑hoc results
 print(posthoc)
+
 
 
 #-----------------------------ANOVA and Bonferroni for Accent----------------------
