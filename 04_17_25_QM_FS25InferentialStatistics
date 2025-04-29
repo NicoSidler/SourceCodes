@@ -1,4 +1,59 @@
-#------------------- Fluency: Paired t-test and Cohen's D-----------------
+#------------------- Overall Fluency: Paired t-test + Cohen's d (just F/D on likert scale) -------------------
+
+
+# 0) Install & load required packages
+pkgs <- c("dplyr", "tidyr", "ggplot2")
+invisible(lapply(pkgs, function(p) {
+  if (!requireNamespace(p, quietly = TRUE)) {
+    install.packages(p, dependencies = TRUE)
+  }
+  library(p, character.only = TRUE)
+}))
+
+# 1) Compute each participant’s overall mean rating in Disfluent (D) vs. Fluent (F)
+means_df <- data %>%
+  group_by(participant_ID, fluent) %>%
+  summarise(mean_rating = mean(value, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = fluent, values_from = mean_rating) %>%
+  filter(!is.na(D) & !is.na(F))
+
+# 2) Create difference scores for assumption checks and effect-size calculation
+diffs <- means_df$F - means_df$D
+
+# 3) Assumption check: Histogram + density of difference scores
+hist(diffs,
+     main   = "Histogram of Difference Scores (F - D)",
+     xlab   = "Difference in Mean Rating",
+     breaks = 30,
+     col    = "lightgray",
+     border = "black")
+lines(density(diffs), col = "blue", lwd = 2)
+
+# 4) Assumption check: QQ plot of difference scores
+qqnorm(diffs)
+qqline(diffs, col = "red", lwd = 2)
+
+# 5) Paired-samples t-test
+tt <- t.test(means_df$D, means_df$F, paired = TRUE)
+
+# 6) Compute Cohen’s d for paired samples
+cohen_d <- mean(diffs) / sd(diffs)
+
+# 7) Summarize results
+t_test_summary <- data.frame(
+  n        = nrow(means_df),
+  t_stat   = unname(tt$statistic),
+  df       = unname(tt$parameter),
+  p_value  = tt$p.value,
+  cohens_d = cohen_d
+)
+
+# 8) Print the summary table
+print(t_test_summary)
+
+
+
+#------------------- Fluency: Paired t-test and Cohen's D (F/D on each trait) not good option, rather do ANOVA-----------------
 
 # 0) Install & load packages
 pkgs <- c("dplyr", "tidyr")
