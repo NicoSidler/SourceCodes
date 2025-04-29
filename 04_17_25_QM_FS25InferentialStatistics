@@ -1,4 +1,38 @@
-#------------------- Fluency: Paired t-test and Cohen's D-----------------
+#------------------- Overall Fluency: Paired t-test + Cohen's d (just F/D on likert scale) -------------------
+
+# 0) Load required packages
+if (!requireNamespace("dplyr", quietly = TRUE)) install.packages("dplyr")
+if (!requireNamespace("tidyr", quietly = TRUE)) install.packages("tidyr")
+library(dplyr); library(tidyr)
+
+# 1) Compute each participant’s overall mean rating in D vs. F
+means_df <- data %>%
+  group_by(participant_ID, fluent) %>%
+  summarise(mean_rating = mean(value, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = fluent, values_from = mean_rating) %>%
+  filter(!is.na(D) & !is.na(F))
+
+# 2) Paired t-test
+tt <- t.test(means_df$D, means_df$F, paired = TRUE)
+
+# 3) Cohen’s d for paired samples (mean of differences ÷ SD of differences)
+diffs <- means_df$F - means_df$D
+cohen_d <- mean(diffs) / sd(diffs)
+
+# 4) Create a one‐row summary table
+t_test_summary <- data.frame(
+  n          = nrow(means_df),
+  t_stat     = unname(tt$statistic),
+  df         = unname(tt$parameter),
+  p_value    = tt$p.value,
+  cohen_d    = cohen_d
+)
+
+# 5) Print results
+print(t_test_summary)
+
+
+#------------------- Fluency: Paired t-test and Cohen's D (F/D on each trait) not good option, rather do ANOVA-----------------
 
 # 0) Install & load packages
 pkgs <- c("dplyr", "tidyr")
