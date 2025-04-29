@@ -113,12 +113,7 @@ ggplot(qq_df, aes(x = theoretical, y = residual_value)) +
        y = "Sample Quantiles") +
   theme_minimal()
 
-## 4b) Homogeneity of variances (Levene's Test)
-# Create a grouping variable combining trait and fluency
-summary_data$grouping <- interaction(summary_data$trait, summary_data$fluent)
 
-cat("\nLevene's Test for homogeneity of variances:\n")
-print(leveneTest(mean_rating ~ grouping, data = summary_data))
 
 # 5) Post‑hoc paired comparisons (Fluent vs. Disfluent) within each trait
 emm <- emmeans(anova_model, ~ fluent | trait)
