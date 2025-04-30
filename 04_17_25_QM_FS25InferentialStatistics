@@ -1,6 +1,3 @@
-#------------------- Overall Fluency: Paired t-test + Cohen's d (just F/D on likert scale) -------------------
-
-
 # 0) Install & load required packages
 pkgs <- c("dplyr", "tidyr", "ggplot2")
 invisible(lapply(pkgs, function(p) {
@@ -17,10 +14,12 @@ means_df <- data %>%
   pivot_wider(names_from = fluent, values_from = mean_rating) %>%
   filter(!is.na(D) & !is.na(F))
 
-# 2) Create difference scores for assumption checks and effect-size calculation
+# 2) Create difference scores (F - D)
 diffs <- means_df$F - means_df$D
 
-# 3) Assumption check: Histogram + density of difference scores
+# 3) Assumption check: Normality of difference scores
+
+# 3a) Histogram + density
 hist(diffs,
      main   = "Histogram of Difference Scores (F - D)",
      xlab   = "Difference in Mean Rating",
@@ -29,14 +28,33 @@ hist(diffs,
      border = "black")
 lines(density(diffs), col = "blue", lwd = 2)
 
-# 4) Assumption check: QQ plot of difference scores
+# 3b) QQ-plot
 qqnorm(diffs)
 qqline(diffs, col = "red", lwd = 2)
 
-# 5) Paired-samples t-test
+# 3c) Shapiro–Wilk test
+shapiro_result <- shapiro.test(diffs)
+print(shapiro_result)   # p > .05 suggests normality
+
+# 4) Assumption check: Outliers in difference scores
+
+# 4a) Boxplot to visually flag outliers
+boxplot(diffs,
+        main = "Boxplot of Difference Scores (F - D)",
+        ylab = "Difference in Mean Rating")
+
+# 4b) Identify numeric outliers via 1.5 × IQR rule
+Q1      <- quantile(diffs, 0.25)
+Q3      <- quantile(diffs, 0.75)
+IQR_val <- IQR(diffs)
+outliers <- diffs[ diffs < (Q1 - 1.5 * IQR_val) |
+                     diffs > (Q3 + 1.5 * IQR_val) ]
+print(outliers)         # any extreme cases worth noting
+
+# 5) Run paired-samples t-test
 tt <- t.test(means_df$D, means_df$F, paired = TRUE)
 
-# 6) Compute Cohen’s d for paired samples
+# 6) Compute Cohen's d for paired samples
 cohen_d <- mean(diffs) / sd(diffs)
 
 # 7) Summarize results
@@ -48,7 +66,7 @@ t_test_summary <- data.frame(
   cohens_d = cohen_d
 )
 
-# 8) Print the summary table
+# 8) Print summary table
 print(t_test_summary)
 
 
