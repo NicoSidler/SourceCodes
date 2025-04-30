@@ -32,7 +32,7 @@ lines(density(diffs), col = "blue", lwd = 2)
 qqnorm(diffs)
 qqline(diffs, col = "red", lwd = 2)
 
-# 3c) Shapiro–Wilk test
+# 3c) Shapiro–Wilk test not to be done because of large sample size!
 shapiro_result <- shapiro.test(diffs)
 print(shapiro_result)   # p > .05 suggests normality
 
