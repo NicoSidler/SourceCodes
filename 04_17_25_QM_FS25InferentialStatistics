@@ -201,7 +201,7 @@ trait_results <- lapply(sort(unique(data$trait)), function(tr) {
 trait_summary <- do.call(rbind, trait_results)
 print(trait_summary)
 
-#--ANOVA and Bonferroni (also Fluency, but more complex model)
+#------------------------------------------------------------------------ANOVA and Bonferroni (also Fluency, but more complex model)
 
 # 0) Install & load required packages
 pkgs <- c("dplyr", "tidyr", "afex", "emmeans", "car", "ggplot2")
