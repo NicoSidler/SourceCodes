@@ -362,12 +362,11 @@ for (tr in sort(unique(data$trait))) {
   diffs <- means_df$D - means_df$F
   
   # 2c) Identify outlier indices via 1.5 × IQR rule
-  Q1         <- quantile(diffs, 0.25)
-  Q3         <- quantile(diffs, 0.75)
-  IQR_val    <- IQR(diffs)
+  Q1          <- quantile(diffs, 0.25)
+  Q3          <- quantile(diffs, 0.75)
+  IQR_val     <- IQR(diffs)
   lower_fence <- Q1 - 1.5 * IQR_val
   upper_fence <- Q3 + 1.5 * IQR_val
-  
   outlier_idx <- which(diffs < lower_fence | diffs > upper_fence)
   
   # 2d) Remove outliers
@@ -376,22 +375,28 @@ for (tr in sort(unique(data$trait))) {
   # 2e) Compute new diffs
   filtered_diffs <- filtered_means_df$D - filtered_means_df$F
   
-  # 2f) Rerun paired t-test
-  tt_filtered <- t.test(filtered_means_df$D,
-                        filtered_means_df$F,
-                        paired = TRUE)
+  # 2f) Rerun paired t-test (two-tailed by default)
+  tt_filtered <- t.test(
+    filtered_means_df$D,
+    filtered_means_df$F,
+    paired = TRUE
+  )
   
   # 2g) Recompute Cohen's d
   cohen_d_filtered <- mean(filtered_diffs) / sd(filtered_diffs)
   
-  # 2h) Store summary
+  # 2h) Compute mean difference (D - F)
+  mean_diff <- mean(filtered_diffs, na.rm = TRUE)
+  
+  # 2i) Store summary including the mean difference
   filtered_results[[tr]] <- data.frame(
-    trait     = tr,
-    n         = nrow(filtered_means_df),
-    t_stat    = unname(tt_filtered$statistic),
-    df        = unname(tt_filtered$parameter),
-    p_value   = tt_filtered$p.value,
-    cohens_d  = cohen_d_filtered,
+    trait            = tr,
+    n                = nrow(filtered_means_df),
+    diff_D_minus_F   = round(mean_diff, 3),
+    t_stat           = unname(round(tt_filtered$statistic, 3)),
+    df               = unname(tt_filtered$parameter),
+    p_value          = tt_filtered$p.value,
+    cohens_d         = round(cohen_d_filtered, 3),
     stringsAsFactors = FALSE
   )
 }
@@ -399,8 +404,9 @@ for (tr in sort(unique(data$trait))) {
 # 3) Combine all trait results into one data frame
 filtered_trait_summary <- do.call(rbind, filtered_results)
 
-# 4) View the cleaned t-test summaries
+# 4) View the cleaned t-test summaries with D–F
 print(filtered_trait_summary)
+
 
 
 
