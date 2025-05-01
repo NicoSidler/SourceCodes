@@ -201,7 +201,228 @@ trait_results <- lapply(sort(unique(data$trait)), function(tr) {
 trait_summary <- do.call(rbind, trait_results)
 print(trait_summary)
 
-#--ANOVA and Bonferroni (also Fluency, but more complex model)
+
+
+
+
+
+
+
+#----------------------------------------------------------------------------
+#------------ Assumptions for t-test for articulate trait----------------------
+# Assumption checks for the “articulate” trait
+
+# 1) Prepare paired data for trait == "articulate"
+paired_articulate <- data %>%
+  filter(trait == "articulate") %>%
+  group_by(participant_ID, fluent) %>%
+  summarise(mean_val = mean(value, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = fluent, values_from = mean_val) %>%
+  filter(!is.na(F) & !is.na(D))
+
+# 2) Compute difference scores (D – F)
+diffs_articulate <- paired_articulate$D - paired_articulate$F
+
+# 3) Normality of difference scores
+
+# 3a) Histogram + density
+hist(diffs_articulate,
+     main   = "Histogram of Difference Scores (D - F)\nTrait: articulate",
+     xlab   = "Difference in Mean Rating (D - F)",
+     breaks = 30,
+     col    = "lightgray",
+     border = "black")
+lines(density(diffs_articulate), col = "blue", lwd = 2)
+
+# 3b) QQ-plot
+qqnorm(diffs_articulate,
+       main = "QQ-Plot of Difference Scores (D - F)\nTrait: articulate")
+qqline(diffs_articulate, col = "red", lwd = 2)
+
+# 4) Outliers in difference scores
+
+# 4a) Boxplot
+boxplot(diffs_articulate,
+        main = "Boxplot of Difference Scores (D - F)\nTrait: articulate",
+        ylab = "Difference in Mean Rating (D - F)")
+
+# 4b) 1.5 × IQR rule
+Q1         <- quantile(diffs_articulate, 0.25)
+Q3         <- quantile(diffs_articulate, 0.75)
+IQR_val    <- IQR(diffs_articulate)
+lower_fence <- Q1 - 1.5 * IQR_val
+upper_fence <- Q3 + 1.5 * IQR_val
+
+outliers_articulate <- diffs_articulate[
+  diffs_articulate < lower_fence |
+  diffs_articulate > upper_fence
+]
+print(outliers_articulate)  # any extreme difference scores
+
+
+
+
+
+
+
+#-----------------------------------------------------------
+#-----assumptions for all the other traits-----------
+
+# 0) Install & load packages
+pkgs <- c("dplyr", "tidyr")
+invisible(lapply(pkgs, function(p) {
+  if (!require(p, character.only = TRUE)) {
+    install.packages(p, dependencies = TRUE)
+    library(p, character.only = TRUE)
+  }
+}))
+
+# 1) Define the traits to check (excluding "articulate" if you wish)
+traits_to_check <- setdiff(sort(unique(data$trait)), "articulate")
+
+# 2) Loop over each trait and produce separate plots
+for (tr in traits_to_check) {
+  cat("\n\n===== Trait:", tr, "=====\n")
+  
+  # 2a) Prepare paired data
+  paired <- data %>%
+    filter(trait == tr) %>%
+    group_by(participant_ID, fluent) %>%
+    summarise(mean_val = mean(value, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = fluent, values_from = mean_val) %>%
+    filter(!is.na(F) & !is.na(D))
+  
+  # 2b) Compute difference scores (D – F)
+  diffs <- paired$D - paired$F
+  
+  # 2c) 1) Histogram + density
+  hist(diffs,
+       main   = paste0("Histogram of D–F for trait: ", tr),
+       xlab   = "Difference (D - F)",
+       breaks = 30,
+       col    = "lightgray",
+       border = "black")
+  lines(density(diffs), col = "blue", lwd = 2)
+  
+  # 2c) 2) QQ-plot
+  qqnorm(diffs,
+         main = paste0("QQ-Plot of D–F for trait: ", tr))
+  qqline(diffs, col = "red", lwd = 2)
+  
+  # 2c) 3) Boxplot
+  boxplot(diffs,
+          main = paste0("Boxplot of D–F for trait: ", tr),
+          ylab = "Difference (D - F)")
+ 
+#--------for all the results just click on arrow where the plots are in R
+  # 2d) Identify numeric outliers via 1.5 × IQR rule
+  Q1         <- quantile(diffs, 0.25)
+  Q3         <- quantile(diffs, 0.75)
+  IQR_val    <- IQR(diffs)
+  lower_fence <- Q1 - 1.5 * IQR_val
+  upper_fence <- Q3 + 1.5 * IQR_val
+  
+  outliers <- diffs[ diffs < lower_fence | diffs > upper_fence ]
+  if (length(outliers) > 0) {
+    cat("Outliers (D–F):", paste(round(outliers, 3), collapse = ", "), "\n")
+  } else {
+    cat("No outliers detected.\n")
+  }
+}
+
+
+
+
+#----------------------------------------
+#------------------t-test and cohen's d for each trait with removed outliers-----------------
+
+# 0) Install & load required packages
+pkgs <- c("dplyr", "tidyr")
+invisible(lapply(pkgs, function(p) {
+  if (!requireNamespace(p, quietly = TRUE)) {
+    install.packages(p, dependencies = TRUE)
+  }
+  library(p, character.only = TRUE)
+}))
+
+# 1) Prepare an empty list to store results
+filtered_results <- list()
+
+# 2) Loop over all traits
+for (tr in sort(unique(data$trait))) {
+  # 2a) Subset and prepare paired data for this trait
+  means_df <- data %>%
+    filter(trait == tr) %>%
+    group_by(participant_ID, fluent) %>%
+    summarise(mean_rating = mean(value, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = fluent, values_from = mean_rating) %>%
+    filter(!is.na(D) & !is.na(F))
+  
+  # 2b) Compute difference scores (D - F)
+  diffs <- means_df$D - means_df$F
+  
+  # 2c) Identify outlier indices via 1.5 × IQR rule
+  Q1          <- quantile(diffs, 0.25)
+  Q3          <- quantile(diffs, 0.75)
+  IQR_val     <- IQR(diffs)
+  lower_fence <- Q1 - 1.5 * IQR_val
+  upper_fence <- Q3 + 1.5 * IQR_val
+  outlier_idx <- which(diffs < lower_fence | diffs > upper_fence)
+  
+  # 2d) Remove outliers
+  filtered_means_df <- means_df[-outlier_idx, ]
+  
+  # 2e) Compute new diffs
+  filtered_diffs <- filtered_means_df$D - filtered_means_df$F
+  
+  # 2f) Rerun paired t-test (two-tailed by default)
+  tt_filtered <- t.test(
+    filtered_means_df$D,
+    filtered_means_df$F,
+    paired = TRUE
+  )
+  
+  # 2g) Recompute Cohen's d
+  cohen_d_filtered <- mean(filtered_diffs) / sd(filtered_diffs)
+  
+  # 2h) Compute mean difference (D - F)
+  mean_diff <- mean(filtered_diffs, na.rm = TRUE)
+  
+  # 2i) Store summary including the mean difference
+  filtered_results[[tr]] <- data.frame(
+    trait            = tr,
+    n                = nrow(filtered_means_df),
+    diff_D_minus_F   = round(mean_diff, 3),
+    t_stat           = unname(round(tt_filtered$statistic, 3)),
+    df               = unname(tt_filtered$parameter),
+    p_value          = tt_filtered$p.value,
+    cohens_d         = round(cohen_d_filtered, 3),
+    stringsAsFactors = FALSE
+  )
+}
+
+# 3) Combine all trait results into one data frame
+filtered_trait_summary <- do.call(rbind, filtered_results)
+
+# 4) View the cleaned t-test summaries with D–F
+print(filtered_trait_summary)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#------------------------------------------------------------------------ANOVA and Bonferroni (also Fluency, but more complex model)
 
 # 0) Install & load required packages
 pkgs <- c("dplyr", "tidyr", "afex", "emmeans", "car", "ggplot2")
