@@ -333,6 +333,74 @@ for (tr in traits_to_check) {
 
 
 
+#----------------------------------------
+#------------------t-test and cohen's d for each trait with removed outliers-----------------
+
+# 0) Install & load required packages
+pkgs <- c("dplyr", "tidyr")
+invisible(lapply(pkgs, function(p) {
+  if (!requireNamespace(p, quietly = TRUE)) {
+    install.packages(p, dependencies = TRUE)
+  }
+  library(p, character.only = TRUE)
+}))
+
+# 1) Prepare an empty list to store results
+filtered_results <- list()
+
+# 2) Loop over all traits
+for (tr in sort(unique(data$trait))) {
+  # 2a) Subset and prepare paired data for this trait
+  means_df <- data %>%
+    filter(trait == tr) %>%
+    group_by(participant_ID, fluent) %>%
+    summarise(mean_rating = mean(value, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = fluent, values_from = mean_rating) %>%
+    filter(!is.na(D) & !is.na(F))
+  
+  # 2b) Compute difference scores (D - F)
+  diffs <- means_df$D - means_df$F
+  
+  # 2c) Identify outlier indices via 1.5 × IQR rule
+  Q1         <- quantile(diffs, 0.25)
+  Q3         <- quantile(diffs, 0.75)
+  IQR_val    <- IQR(diffs)
+  lower_fence <- Q1 - 1.5 * IQR_val
+  upper_fence <- Q3 + 1.5 * IQR_val
+  
+  outlier_idx <- which(diffs < lower_fence | diffs > upper_fence)
+  
+  # 2d) Remove outliers
+  filtered_means_df <- means_df[-outlier_idx, ]
+  
+  # 2e) Compute new diffs
+  filtered_diffs <- filtered_means_df$D - filtered_means_df$F
+  
+  # 2f) Rerun paired t-test
+  tt_filtered <- t.test(filtered_means_df$D,
+                        filtered_means_df$F,
+                        paired = TRUE)
+  
+  # 2g) Recompute Cohen's d
+  cohen_d_filtered <- mean(filtered_diffs) / sd(filtered_diffs)
+  
+  # 2h) Store summary
+  filtered_results[[tr]] <- data.frame(
+    trait     = tr,
+    n         = nrow(filtered_means_df),
+    t_stat    = unname(tt_filtered$statistic),
+    df        = unname(tt_filtered$parameter),
+    p_value   = tt_filtered$p.value,
+    cohens_d  = cohen_d_filtered,
+    stringsAsFactors = FALSE
+  )
+}
+
+# 3) Combine all trait results into one data frame
+filtered_trait_summary <- do.call(rbind, filtered_results)
+
+# 4) View the cleaned t-test summaries
+print(filtered_trait_summary)
 
 
 
