@@ -1,0 +1,31 @@
+# 0) Set working directory to where your CSV lives:
+setwd("C:/Users/Nico Sidler/OneDrive - Universitaet Bern/Desktop/PracticalExcercise4")
+
+# 1) Read the data
+df <- read.csv("JVH2015.csv", stringsAsFactors = FALSE)
+
+# 2) Quick look at structure
+print(names(df))   # Should show: "LearningCondition" and "PropCorrect"
+head(df)           # First few rows
+
+# 3) Overall summary
+summary(df)
+
+# 4) Load needed packages
+if (!requireNamespace("dplyr",   quietly = TRUE)) install.packages("dplyr")
+if (!requireNamespace("moments", quietly = TRUE)) install.packages("moments")
+library(dplyr)
+library(moments)
+
+# 5) Group‐wise descriptive statistics
+stats_by_condition <- df %>%
+  group_by(LearningCondition) %>%
+  summarise(
+    n        = n(),
+    mean     = mean(PropCorrect, na.rm = TRUE),
+    median   = median(PropCorrect, na.rm = TRUE),
+    skewness = skewness(PropCorrect, na.rm = TRUE),
+    kurtosis = kurtosis(PropCorrect, na.rm = TRUE)
+  )
+
+print(stats_by_condition)
