@@ -252,6 +252,16 @@ participants_both <- data %>%
 counts_by_condition %>%
   left_join(participants_both, by = "trait")
 
+# Shapiro–Wilk tests for the two traits
+shapiro_conf   <- shapiro.test(diffs_conf)
+shapiro_pleas  <- shapiro.test(diffs_pleas)
+
+# Display results
+print(shapiro_conf)
+print(shapiro_pleas)
+
+#----------------------------------------------------------
+
 # 0) Install & load packages
 pkgs <- c("dplyr", "tidyr")
 invisible(lapply(pkgs, function(p) {
@@ -322,126 +332,6 @@ for (tr in traits_to_check) {
 
 
 
-#------------ Assumptions for t-test for articulate trait----------------------
-# Assumption checks for the “articulate” trait
-
-# 1) Prepare paired data for trait == "articulate"
-paired_articulate <- data %>%
-  filter(trait == "articulate") %>%
-  group_by(participant_ID, fluent) %>%
-  summarise(mean_val = mean(value, na.rm = TRUE), .groups = "drop") %>%
-  pivot_wider(names_from = fluent, values_from = mean_val) %>%
-  filter(!is.na(F) & !is.na(D))
-
-# 2) Compute difference scores (D – F)
-diffs_articulate <- paired_articulate$D - paired_articulate$F
-
-# 3) Normality of difference scores
-
-# 3a) Histogram + density
-hist(diffs_articulate,
-     main   = "Histogram of Difference Scores (D - F)\nTrait: articulate",
-     xlab   = "Difference in Mean Rating (D - F)",
-     breaks = 30,
-     col    = "lightgray",
-     border = "black")
-lines(density(diffs_articulate), col = "blue", lwd = 2)
-
-# 3b) QQ-plot
-qqnorm(diffs_articulate,
-       main = "QQ-Plot of Difference Scores (D - F)\nTrait: articulate")
-qqline(diffs_articulate, col = "red", lwd = 2)
-
-# 4) Outliers in difference scores
-
-# 4a) Boxplot
-boxplot(diffs_articulate,
-        main = "Boxplot of Difference Scores (D - F)\nTrait: articulate",
-        ylab = "Difference in Mean Rating (D - F)")
-
-# 4b) 1.5 × IQR rule
-Q1         <- quantile(diffs_articulate, 0.25)
-Q3         <- quantile(diffs_articulate, 0.75)
-IQR_val    <- IQR(diffs_articulate)
-lower_fence <- Q1 - 1.5 * IQR_val
-upper_fence <- Q3 + 1.5 * IQR_val
-
-outliers_articulate <- diffs_articulate[
-  diffs_articulate < lower_fence |
-  diffs_articulate > upper_fence
-]
-print(outliers_articulate)  # any extreme difference scores
-
-
-
-
-
-
-
-#-----------------------------------------------------------
-#-----assumptions for all the other traits-----------
-
-# 0) Install & load packages
-pkgs <- c("dplyr", "tidyr")
-invisible(lapply(pkgs, function(p) {
-  if (!require(p, character.only = TRUE)) {
-    install.packages(p, dependencies = TRUE)
-    library(p, character.only = TRUE)
-  }
-}))
-
-# 1) Define the traits to check (excluding "articulate" if you wish)
-traits_to_check <- setdiff(sort(unique(data$trait)), "articulate")
-
-# 2) Loop over each trait and produce separate plots
-for (tr in traits_to_check) {
-  cat("\n\n===== Trait:", tr, "=====\n")
-  
-  # 2a) Prepare paired data
-  paired <- data %>%
-    filter(trait == tr) %>%
-    group_by(participant_ID, fluent) %>%
-    summarise(mean_val = mean(value, na.rm = TRUE), .groups = "drop") %>%
-    pivot_wider(names_from = fluent, values_from = mean_val) %>%
-    filter(!is.na(F) & !is.na(D))
-  
-  # 2b) Compute difference scores (D – F)
-  diffs <- paired$D - paired$F
-  
-  # 2c) 1) Histogram + density
-  hist(diffs,
-       main   = paste0("Histogram of D–F for trait: ", tr),
-       xlab   = "Difference (D - F)",
-       breaks = 30,
-       col    = "lightgray",
-       border = "black")
-  lines(density(diffs), col = "blue", lwd = 2)
-  
-  # 2c) 2) QQ-plot
-  qqnorm(diffs,
-         main = paste0("QQ-Plot of D–F for trait: ", tr))
-  qqline(diffs, col = "red", lwd = 2)
-  
-  # 2c) 3) Boxplot
-  boxplot(diffs,
-          main = paste0("Boxplot of D–F for trait: ", tr),
-          ylab = "Difference (D - F)")
- 
-#--------for all the results just click on arrow where the plots are in R
-  # 2d) Identify numeric outliers via 1.5 × IQR rule
-  Q1         <- quantile(diffs, 0.25)
-  Q3         <- quantile(diffs, 0.75)
-  IQR_val    <- IQR(diffs)
-  lower_fence <- Q1 - 1.5 * IQR_val
-  upper_fence <- Q3 + 1.5 * IQR_val
-  
-  outliers <- diffs[ diffs < lower_fence | diffs > upper_fence ]
-  if (length(outliers) > 0) {
-    cat("Outliers (D–F):", paste(round(outliers, 3), collapse = ", "), "\n")
-  } else {
-    cat("No outliers detected.\n")
-  }
-}
 
 
 
