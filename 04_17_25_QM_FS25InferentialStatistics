@@ -10,64 +10,77 @@ invisible(lapply(pkgs, function(p) {
 # 1) Compute each participant’s overall mean rating in Disfluent (D) vs. Fluent (F)
 means_df <- data %>%
   group_by(participant_ID, fluent) %>%
-  summarise(mean_rating = mean(value, na.rm = TRUE), .groups = "drop") %>%
-  pivot_wider(names_from = fluent, values_from = mean_rating) %>%
+  summarise(
+    mean_rating = mean(value, na.rm = TRUE),
+    .groups     = "drop"
+  ) %>%
+  pivot_wider(
+    names_from  = fluent,
+    values_from = mean_rating
+  ) %>%
   filter(!is.na(D) & !is.na(F))
 
 # 2) Create difference scores (F - D)
 diffs <- means_df$F - means_df$D
 
 # 3) Assumption check: Normality of difference scores
-
 # 3a) Histogram + density
-hist(diffs,
-     main   = "Histogram of Difference Scores (F - D)",
-     xlab   = "Difference in Mean Rating",
-     breaks = 30,
-     col    = "lightgray",
-     border = "black")
+hist(
+  diffs,
+  main   = "Histogram of Difference Scores (F - D)",
+  xlab   = "Difference in Mean Rating (F − D)",
+  breaks = 30,
+  col    = "lightgray",
+  border = "black"
+)
 lines(density(diffs), col = "blue", lwd = 2)
 
 # 3b) QQ-plot
 qqnorm(diffs)
 qqline(diffs, col = "red", lwd = 2)
 
-# 3c) Shapiro–Wilk test not to be done because of large sample size!
+# 3c) (Optional) Shapiro–Wilk test—note large n makes this overly sensitive
 shapiro_result <- shapiro.test(diffs)
-print(shapiro_result)   # p > .05 suggests normality
+print(shapiro_result)
 
 # 4) Assumption check: Outliers in difference scores
+# 4a) Boxplot
+boxplot(
+  diffs,
+  main = "Boxplot of Difference Scores (F - D)",
+  ylab = "Difference in Mean Rating (F − D)"
+)
 
-# 4a) Boxplot to visually flag outliers
-boxplot(diffs,
-        main = "Boxplot of Difference Scores (F - D)",
-        ylab = "Difference in Mean Rating")
-
-# 4b) Identify numeric outliers via 1.5 × IQR rule
+# 4b) Identify outliers via 1.5 × IQR rule
 Q1      <- quantile(diffs, 0.25)
 Q3      <- quantile(diffs, 0.75)
 IQR_val <- IQR(diffs)
 outliers <- diffs[ diffs < (Q1 - 1.5 * IQR_val) |
                      diffs > (Q3 + 1.5 * IQR_val) ]
-print(outliers)         # any extreme cases worth noting
+print(outliers)
 
-# 5) Run paired-samples t-test
-tt <- t.test(means_df$D, means_df$F, paired = TRUE)
+# 5) Run paired-samples t-test in the same order (Fluent − Disfluent)
+tt <- t.test(
+  x      = means_df$F,
+  y      = means_df$D,
+  paired = TRUE
+)
 
-# 6) Compute Cohen's d for paired samples
+# 6) Compute Cohen's d for paired samples (F − D)
 cohen_d <- mean(diffs) / sd(diffs)
 
-# 7) Summarize results
+# 7) Summarize results (all positive values)
 t_test_summary <- data.frame(
   n        = nrow(means_df),
-  t_stat   = unname(tt$statistic),
+  t_stat   = unname(tt$statistic),       # will be positive if F > D
   df       = unname(tt$parameter),
   p_value  = tt$p.value,
-  cohens_d = cohen_d
+  cohens_d = cohen_d                      # positive by construction
 )
 
 # 8) Print summary table
 print(t_test_summary)
+
 
 #------- test with outliers----------------
 
