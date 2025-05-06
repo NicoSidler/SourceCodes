@@ -229,7 +229,99 @@ print(trait_summary)
 
 
 
-#----------------------------------------------------------------------------
+#---------------------Assumptions t-test for confident and pleasant-------------------------------------------------------
+
+library(dplyr)
+
+# 1) Raw counts per trait × fluent condition
+counts_by_condition <- data %>%
+  filter(trait %in% c("pleasant", "confident")) %>%
+  group_by(trait, fluent) %>%
+  summarise(n_values = n(), .groups = "drop")
+
+# 2) Number of participants with both F and D per trait
+participants_both <- data %>%
+  filter(trait %in% c("pleasant", "confident")) %>%
+  distinct(trait, participant_ID, fluent) %>%
+  group_by(trait, participant_ID) %>%
+  summarise(n_levels = n(), .groups = "drop") %>%
+  filter(n_levels == 2) %>%
+  count(trait, name = "participants_both")
+
+# 3) Join for a single table
+counts_by_condition %>%
+  left_join(participants_both, by = "trait")
+
+# 0) Install & load packages
+pkgs <- c("dplyr", "tidyr")
+invisible(lapply(pkgs, function(p) {
+  if (!requireNamespace(p, quietly = TRUE)) {
+    install.packages(p, dependencies = TRUE)
+  }
+  library(p, character.only = TRUE)
+}))
+
+# 1) Define the two traits to check
+traits_to_check <- c("confident", "pleasant")
+
+# 2) Loop over each selected trait and produce diagnostic plots
+for (tr in traits_to_check) {
+  cat("\n\n===== Trait:", tr, "=====\n")
+  
+  # 2a) Prepare paired data
+  paired <- data %>%
+    filter(trait == tr) %>%
+    group_by(participant_ID, fluent) %>%
+    summarise(mean_val = mean(value, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = fluent, values_from = mean_val) %>%
+    filter(!is.na(F) & !is.na(D))
+  
+  # 2b) Compute difference scores (F – D)
+  diffs <- paired$F - paired$D
+  
+  # 2c1) Histogram + density
+  hist(
+    diffs,
+    main   = paste0("Histogram of F–D for trait: ", tr),
+    xlab   = "Difference (F - D)",
+    breaks = 30,
+    col    = "lightgray",
+    border = "black"
+  )
+  lines(density(diffs), col = "blue", lwd = 2)
+  
+  # 2c2) QQ-plot
+  qqnorm(
+    diffs,
+    main = paste0("QQ-Plot of F–D for trait: ", tr)
+  )
+  qqline(diffs, col = "red", lwd = 2)
+  
+  # 2c3) Boxplot
+  boxplot(
+    diffs,
+    main = paste0("Boxplot of F–D for trait: ", tr),
+    ylab = "Difference (F - D)"
+  )
+  
+  # 2d) Identify numeric outliers via 1.5 × IQR rule
+  Q1          <- quantile(diffs, 0.25)
+  Q3          <- quantile(diffs, 0.75)
+  IQR_val     <- IQR(diffs)
+  lower_fence <- Q1 - 1.5 * IQR_val
+  upper_fence <- Q3 + 1.5 * IQR_val
+  
+  outliers <- diffs[ diffs < lower_fence | diffs > upper_fence ]
+  if (length(outliers) > 0) {
+    cat("Outliers (F–D):", paste(round(outliers, 3), collapse = ", "), "\n")
+  } else {
+    cat("No outliers detected.\n")
+  }
+}
+
+
+
+
 #------------ Assumptions for t-test for articulate trait----------------------
 # Assumption checks for the “articulate” trait
 
