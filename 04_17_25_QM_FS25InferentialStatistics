@@ -173,46 +173,54 @@ print(t_test_summary_filtered)
 # 0) Install & load packages
 pkgs <- c("dplyr", "tidyr")
 invisible(lapply(pkgs, function(p) {
-  if (!require(p, character.only = TRUE)) {
+  if (!requireNamespace(p, quietly = TRUE)) {
     install.packages(p, dependencies = TRUE)
-    library(p, character.only = TRUE)
   }
+  library(p, character.only = TRUE)
 }))
 
-# 1) Loop over traits
-trait_results <- lapply(sort(unique(data$trait)), function(tr) {
+# 1) Loop over traits and compute paired stats (F - D)
+filtered_results <- list()
+for (tr in sort(unique(data$trait))) {
+  # Subset for current trait
   d <- filter(data, trait == tr)
   
-  # Prepare paired data
-  paired <- d %>%
+  # Prepare paired means
+  filtered_means_df <- d %>%
     group_by(participant_ID, fluent) %>%
     summarise(mean_val = mean(value, na.rm = TRUE), .groups = "drop") %>%
     pivot_wider(names_from = fluent, values_from = mean_val) %>%
     filter(!is.na(F) & !is.na(D))
   
-  # Paired t-test
-  t_test <- t.test(paired$D, paired$F, paired = TRUE)
-  p_ttest <- t_test$p.value
+  # Compute difference scores (F - D)
+  diffs <- filtered_means_df$F - filtered_means_df$D
+  mean_diff <- mean(diffs, na.rm = TRUE)
+  
+  # Paired t-test in the order F - D
+  tt_filtered <- t.test(filtered_means_df$F,
+                        filtered_means_df$D,
+                        paired = TRUE)
   
   # Cohen's d for paired data
-  diffs <- paired$D - paired$F
-  cohen_d <- if (length(diffs) > 1) mean(diffs) / sd(diffs) else NA_real_
+  cohens_d_filtered <- if (length(diffs) > 1) mean_diff / sd(diffs) else NA_real_
   
-  # Return results
-  data.frame(
-    trait           = tr,
-    F_mean          = round(mean(paired$F, na.rm = TRUE), 3),
-    D_mean          = round(mean(paired$D, na.rm = TRUE), 3),
-    diff_D_minus_F  = round(mean(diffs, na.rm = TRUE), 3),
-    ttest_p         = round(p_ttest, 3),
-    cohens_d        = round(cohen_d, 3),
+  # Store results with positive values
+  filtered_results[[tr]] <- data.frame(
+    trait          = tr,
+    n              = nrow(filtered_means_df),
+    diff_F_minus_D = round(mean_diff, 3),
+    t_stat         = unname(round(tt_filtered$statistic, 3)),
+    df             = unname(tt_filtered$parameter),
+    p_value        = tt_filtered$p.value,
+    cohens_d       = round(cohens_d_filtered, 3),
     stringsAsFactors = FALSE
   )
-})
+}
 
-# 2) Combine and view
-trait_summary <- do.call(rbind, trait_results)
+# 2) Combine and view summary table
+trait_summary <- do.call(rbind, filtered_results)
 print(trait_summary)
+
 
 
 
