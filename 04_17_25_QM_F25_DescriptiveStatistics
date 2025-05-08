@@ -120,6 +120,30 @@ for (v in vars) {
   print(pct_rounded)
 }
 
+#------------------------------------------correction of mistake (only first line was counted above
+library(dplyr)
+
+# Variables of interest
+vars <- c("accent", "fluent", "question", "trait")
+
+for (v in vars) {
+  cat("\n==============================\n")
+  cat("Variable:", v, "\n")
+  cat("------------------------------\n")
+  
+  data %>% 
+    # count every response level
+    count(!!rlang::sym(v)) %>%      
+    # compute percentage of total rows
+    mutate(pct = round(n / sum(n) * 100, 1)) %>%  
+    # rename for pretty printing
+    rename(Category = !!rlang::sym(v), N = n) %>%
+    # print the table
+    print()
+}
+
+
+
 # Summary of continuous variables by trait (Likert rating: value)
 
 descriptive_stats <- data %>%
